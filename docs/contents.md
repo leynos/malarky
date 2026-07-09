@@ -5,6 +5,15 @@ set.
 
 ## Project guides
 
+- [Terms of reference](terms-of-reference.md) defines Malarky's users, problem,
+  scope, constraints, and success criteria.
+- [Domain context](context.md) defines the vocabulary shared by product and
+  design documents.
+- [Malarky technical design](malarky-design.md) specifies the architecture,
+  command contracts, mutation model, failure behaviour, and verification
+  properties.
+- [Development roadmap](roadmap.md) sequences Malarky's implementation as
+  GIST-aligned, hypothesis-driven vertical slices.
 - [User guide](users-guide.md) explains how to use the generated project and
   its public build and test commands.
 - [Developer guide](developers-guide.md) explains the local workflow and

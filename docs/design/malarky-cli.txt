@@ -1,0 +1,61 @@
+malarky — add and inspect CriticMarkup without rewriting Markdown
+
+Usage: malarky <COMMAND>
+
+Commands:
+  delete     Mark existing text as deleted, or undo a matching insertion
+  insert     Mark text as inserted at a semantic-text boundary, or undo a deletion
+  replace    Mark existing text as replaced, or undo the inverse replacement
+  highlight  Highlight existing text, or remove a highlight with --delete
+  comment    Comment on existing text, update its comment, or remove it with --delete
+  list       List CriticMarkup annotations without changing the file
+  validate   Validate Markdown and CriticMarkup without changing the file
+
+Mutation command options:
+  --match <INDEX>       Apply the indexed candidate reported by a previous run
+  --all                 Apply every non-overlapping candidate
+  --matching <POLICY>   Maximum matching tier: exact or whitespace
+  --config-path <PATH>  Load project configuration from PATH
+
+delete:
+  malarky delete [OPTIONS] <FILE> <BEFORE> <TEXT> <AFTER>
+
+insert:
+  malarky insert [OPTIONS] <FILE> <BEFORE> <TEXT> <AFTER>
+
+replace:
+  malarky replace [OPTIONS] <FILE> <BEFORE> <OLD> <NEW> <AFTER>
+
+highlight:
+  malarky highlight [OPTIONS] [--delete] <FILE> <TEXT>
+
+comment:
+  malarky comment [OPTIONS] [--delete] <FILE> <TEXT> [COMMENT]
+
+list:
+  malarky list [--config-path <PATH>] <FILE>
+
+validate:
+  malarky validate [--config-path <PATH>] <FILE>
+
+Selection rules:
+  A sole candidate is applied immediately. Multiple candidates make no change
+  and are reported with stable one-based indexes. --match and --all are
+  mutually exclusive. --all fails without changing the file if selected source
+  spans overlap.
+
+Output:
+  A successful mutation writes a unified diff with three context lines to
+  standard output. list writes tab-separated annotation records to standard
+  output. validate writes "valid\t<FILE>" to standard output on success.
+  Diagnostics and errors use standard error.
+
+Exit status:
+  0  Success
+  2  Invalid command line or configuration
+  3  No match
+  4  Multiple matches require --match or --all
+  5  Invalid CriticMarkup mutation or annotation intersection
+  6  Markdown or CriticMarkup parse failure
+  7  File read, temporary-write, or replacement failure
+  8  Validation found one or more document errors

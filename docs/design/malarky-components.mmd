@@ -1,0 +1,18 @@
+flowchart LR
+    Agent[Editing or critic agent] --> CLI[CLI and layered configuration]
+    CLI --> Reader[Capability-scoped file reader]
+    Reader --> Overlay[CriticMarkup overlay parser]
+    Overlay --> Projection[Net-result Markdown projection]
+    Projection --> Markdown[markdown mdast parser]
+    Markdown --> Semantic[Source-mapped semantic blocks]
+    Semantic --> Matcher[Ordered matcher]
+    Matcher --> Selector[Candidate selector]
+    Selector --> Planner[Mutation planner]
+    Overlay --> Planner
+    Markdown --> Planner
+    Planner --> Validator[Prospective reparse and validator]
+    Validator --> Writer[Same-directory replacement writer]
+    Writer --> Diff[Localized unified diff]
+    Diff --> Agent
+    Matcher -. ambiguity .-> CLI
+    Validator -. rejection .-> CLI
