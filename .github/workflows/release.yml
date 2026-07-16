@@ -45,7 +45,7 @@ jobs:
       - uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
         with:
           persist-credentials: false
-      - uses: leynos/shared-actions/.github/actions/setup-rust@3c1fa01bcf4c26dac79975c18b74c01d577dcf95
+      - uses: leynos/shared-actions/.github/actions/setup-rust@dfddcb6cf53a2583e55bf0c3536c01ed1f67dc16
         with:
           toolchain: stable
       - name: Cache cross binary
