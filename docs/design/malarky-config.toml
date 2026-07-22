@@ -1,4 +1,5 @@
-# Project configuration discovered as .malarky.toml.
+# Project configuration discovered as .malarky.toml. ADR 003 defines
+# command-line, environment, project-file, and built-in precedence.
 
 # The highest matching tier. "whitespace" tries exact semantic text first,
 # then collapses Unicode whitespace runs. "exact" disables the second tier.

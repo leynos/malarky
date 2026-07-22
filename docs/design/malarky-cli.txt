@@ -12,7 +12,8 @@ Commands:
   validate   Validate Markdown and CriticMarkup without changing the file
 
 Mutation command options:
-  --match <INDEX>       Apply the indexed candidate reported by a previous run
+  --match <INDEX>       Apply an indexed candidate reported by a previous run
+  --selection <TOKEN>   Bind --match to that report's document and candidate set
   --all                 Apply every non-overlapping candidate
   --matching <POLICY>   Maximum matching tier: exact or whitespace
   --config-path <PATH>  Load project configuration from PATH
@@ -40,15 +41,20 @@ validate:
 
 Selection rules:
   A sole candidate is applied immediately. Multiple candidates make no change
-  and are reported with stable one-based indexes. --match and --all are
-  mutually exclusive. --all fails without changing the file if selected source
-  spans overlap.
+  and are reported with stable one-based indexes and an opaque selection token.
+  --match requires that token through --selection and rejects a changed document
+  or candidate set, even when the index remains in range. --match and --all are
+  mutually exclusive, and --selection is invalid without --match. --all fails
+  without changing the file if selected source spans overlap. This contract is
+  governed by ADR 003.
 
 Output:
-  A successful mutation writes a unified diff with three context lines to
-  standard output. list writes tab-separated annotation records to standard
-  output. validate writes "valid\t<FILE>" to standard output on success.
-  Diagnostics and errors use standard error.
+  A successful mutation replaces the selected <FILE> in place, then writes a
+  localized unified diff with three context lines to standard output. The edit
+  is persisted and is not a preview. The diff is generated before replacement
+  and emitted only after replacement succeeds. list writes tab-separated
+  annotation records to standard output. validate writes "valid\t<FILE>" to
+  standard output on success. Diagnostics and errors use standard error.
 
 Exit status:
   0  Success

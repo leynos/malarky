@@ -1,5 +1,8 @@
 # Malarky mutation matrix
 
+[ADR 002](../adr-002-atomic-mutation-and-file-replacement.md) governs the
+all-or-nothing application and exact inverse rules in this matrix.
+
 Table 1: Required behaviour when a requested mutation encounters existing
 CriticMarkup.
 

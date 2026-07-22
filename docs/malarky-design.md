@@ -16,8 +16,14 @@ correctness and command contract.
 - [Domain types](design/malarky-domain.rs)
 - [Mutation matrix](design/mutation-matrix.md)
 - [Development roadmap](roadmap.md)
+- [ADR 001](adr-001-source-preserving-semantic-model.md): preserve source
+  through mapped semantic text
+- [ADR 002](adr-002-atomic-mutation-and-file-replacement.md): make mutation
+  and replacement failure-atomic
+- [ADR 003](adr-003-agent-cli-and-layered-configuration.md): stabilize the
+  agent CLI and layered configuration
 
-**Last substantive revision:** 10 July 2026
+**Last substantive revision:** 22 July 2026
 
 ## 1. Design context
 
@@ -70,6 +76,8 @@ prove that conversion before source slicing is permitted.
 The [domain types](design/malarky-domain.rs) define half-open `SourceSpan`
 ranges, source-mapped semantic segments, match candidates, annotations, and
 mutation plans. The core accepts no bare integer offsets outside this boundary.
+[ADR 001](adr-001-source-preserving-semantic-model.md)
+governs this representation.
 
 ### 3.1 Semantic text
 
@@ -99,8 +107,13 @@ The CriticMarkup overlay parser projects existing annotations as follows:
 Table 2: Net-result contribution of each annotation kind.
 
 The projection also retains the complete annotation and payload source spans.
+Replacement annotations carry distinct old- and new-payload spans; other kinds
+carry one payload span. Every payload must lie within the complete annotation.
 Mutation planning can therefore distinguish ordinary edits from exact inverse
-operations even when the annotation's old text is absent from semantic text.
+operations even when the annotation's old text is absent from semantic text. An
+inverse replacement selects the exact new-payload span, restores the old bytes,
+and removes the complete original annotation rather than nesting a
+counter-annotation.
 
 ### 3.3 Containment
 
@@ -139,9 +152,9 @@ flowchart LR
     Overlay --> Planner
     Markdown --> Planner
     Planner --> Validator[Prospective reparse and validator]
-    Validator --> Writer[Same-directory replacement writer]
-    Writer --> Diff[Localized unified diff]
-    Diff --> Agent
+    Validator --> Diff[Generate localized unified diff]
+    Diff --> Writer[Compare-safe same-directory replacement]
+    Writer --> Agent[Emit buffered diff]
     Matcher -. ambiguity .-> CLI
     Validator -. rejection .-> CLI
 ```
@@ -234,10 +247,13 @@ original document. A candidate is discarded if its normalized range cannot map
 to one contiguous source interval.
 
 A sole candidate proceeds automatically. Zero candidates return exit status 3.
-Two or more candidates return exit status 4 and the requested numbered report
-without changing the file. `--match N` selects the stable one-based candidate;
-an out-of-range index is a usage error. `--all` selects every candidate only
-when their source spans and planned edits are disjoint.
+Two or more candidates return exit status 4 and a numbered report with an
+opaque selection token, without changing the file. The token fingerprints the
+document bytes and complete ordered candidate set. `--match N` requires the
+reported token through `--selection`; a stale token or out-of-range index is a
+usage error. This prevents a valid index from selecting a shifted candidate
+after an intervening change. `--all` selects every candidate only when their
+source spans and planned edits are disjoint.
 
 ## 7. Mutation algebra
 
@@ -288,6 +304,8 @@ edits; one invalid edit rejects the entire `--all` command.
 The [CLI contract](design/malarky-cli.txt) is normative. Mutation flags appear
 after the verb, so agents can issue `malarky delete --match 1 ...` as specified
 by the terms of reference.
+[ADR 003](adr-003-agent-cli-and-layered-configuration.md) governs this command
+and override surface.
 
 `ortho_config` loads configuration in this precedence order:
 
@@ -295,6 +313,10 @@ by the terms of reference.
 2. `MALARKY_*` environment variables;
 3. an explicit `--config-path` or discovered `.malarky.toml` project file; and
 4. built-in defaults.
+
+Command-line flags and environment variables are invocation settings. Project
+configuration is persistent local policy. This is the exact `ortho_config`
+layer order; no adapter-specific layer may be inserted between them.
 
 The [configuration example](design/malarky-config.toml) defines the initial
 keys. Unknown keys and invalid enum values are configuration errors. Command
@@ -316,7 +338,9 @@ INDEX<TAB>KIND<TAB>START_LINE:START_COLUMN<TAB>END_LINE:END_COLUMN<TAB>NET_TEXT
 
 Fields escape tab, carriage return, newline, and backslash as `\t`, `\r`, `\n`,
 and `\\`. Comments have an empty `NET_TEXT`. The index is stable for an
-unchanged file but is not a persistent identifier.
+unchanged file but is not a persistent identifier. An ambiguity report also
+includes the opaque document-and-candidate-set token required for an indexed
+mutation retry.
 
 `validate` performs decoding, overlay parsing, Markdown parsing, source-map
 checks, block containment checks, and annotation-intersection checks. A valid
@@ -327,18 +351,25 @@ temporary file.
 ## 10. File transaction and success feedback
 
 Mutation commands finish matching, planning, prospective parsing, and diff
-generation before opening a temporary file. The filesystem adapter then:
+generation before opening a temporary file. The buffered diff must succeed
+before replacement, so diff failure cannot follow a committed edit.
+[ADR 002](adr-002-atomic-mutation-and-file-replacement.md) governs the
+transaction. The filesystem adapter then:
 
 1. opens a uniquely named temporary file in the target's directory;
 2. creates it without following links;
 3. copies the original file's permissions;
 4. writes the prospective bytes and synchronizes the temporary file;
-5. verifies that the target identity has not changed since it was read; and
-6. atomically replaces the target where the platform and filesystem support
-   same-directory rename.
+5. acquires an exclusive replacement lock, then verifies the target content
+   fingerprint against the bytes originally read; and
+6. holds the lock through same-directory replacement, or uses a platform atomic
+   compare-and-replace operation that couples fingerprint verification to the
+   replacement.
 
-An identity change reports a concurrent-modification error and leaves the
-target untouched. Temporary-file cleanup is best effort after failure.
+A fingerprint change reports a concurrent-modification error and leaves the
+target untouched. A filesystem-identity check on its own is insufficient
+because an in-place write can retain the same identity, and a check separated
+from rename leaves a race. Temporary-file cleanup is best effort after failure.
 
 The initial contract provides command-level atomic replacement, not power-loss
 durability. `tempfile::NamedTempFile::persist` does not synchronize the
@@ -346,22 +377,23 @@ containing directory, and cross-filesystem persistence is unavailable. The
 same-directory rule avoids the latter; durable directory synchronization
 remains deferred.
 
-After replacement, `similar::TextDiff` emits a unified diff with the configured
-context, defaulting to three lines. Diff paths contain the command-line file
-path and no timestamps. An empty diff is an internal invariant violation
-because every successful mutation must change the file.
+Before replacement, `similar::TextDiff` generates a unified diff with the
+configured context, defaulting to three lines. Diff paths contain the
+command-line file path and no timestamps. After successful replacement, the
+buffered diff is emitted to standard output. An empty diff is an internal
+invariant violation because every successful mutation must change the file.
 
 ## 11. Failure model
 
-| Failure                                                       | Exit | Mutation                         |
-| ------------------------------------------------------------- | ---: | -------------------------------- |
-| Invalid arguments or configuration                            | 2    | None                             |
-| No candidate                                                  | 3    | None                             |
-| Multiple candidates without selection                         | 4    | None                             |
-| Cross-block, partial-intersection, or invalid inverse         | 5    | None                             |
-| Invalid UTF-8, CriticMarkup, Markdown, or source map          | 6    | None                             |
-| Read, temporary-write, identity-check, or replacement failure | 7    | None or original target retained |
-| `validate` finds document errors                              | 8    | None                             |
+| Failure                                                          | Exit | Mutation                         |
+| ---------------------------------------------------------------- | ---: | -------------------------------- |
+| Invalid arguments or configuration                               | 2    | None                             |
+| No candidate                                                     | 3    | None                             |
+| Multiple candidates without selection                            | 4    | None                             |
+| Cross-block, partial-intersection, or invalid inverse            | 5    | None                             |
+| Invalid UTF-8, CriticMarkup, Markdown, or source map             | 6    | None                             |
+| Read, temporary-write, fingerprint, lock, or replacement failure | 7    | None or original target retained |
+| `validate` finds document errors                                 | 8    | None                             |
 
 Table 3: Stable failure classes and file-mutation guarantees.
 
@@ -384,11 +416,15 @@ The architecture has invariants that example-based tests alone do not cover.
    intersected annotation and Markdown span.
 5. **Mapping safety:** Every semantic and normalized range maps to ordered
    UTF-8 source boundaries.
-6. **Inverse law:** Applying an operation and its defined inverse restores the
+6. **Selection freshness:** An indexed retry applies only to the exact document
+   and ordered candidate set that produced its selection token.
+7. **Concurrent preservation:** Replacement succeeds only when the target
+   fingerprint still matches the bytes used for planning and diff generation.
+8. **Inverse law:** Applying an operation and its defined inverse restores the
    exact original bytes.
-7. **Determinism:** Equal document bytes, arguments, and configuration produce
+9. **Determinism:** Equal document bytes, arguments, and configuration produce
    equal ordered candidates and output.
-8. **All-or-nothing selection:** `--all` applies every selected plan or none.
+10. **All-or-nothing selection:** `--all` applies every selected plan or none.
 
 Property-based generators should produce Markdown block trees, Unicode text,
 whitespace variants, CriticMarkup overlays, and intersecting source ranges.
@@ -408,9 +444,10 @@ the CLI, ambiguity, list, validation, and diff formats after semantic
 assertions verify their content.
 
 Filesystem fault injection must cover short writes, synchronization failure,
-target identity change, rename failure, and cleanup failure. The design does
-not claim power-loss durability, network-filesystem rename atomicity, or safety
-against an administrator changing paths outside the opened directory capability.
+fingerprint mismatch, lock failure, compare-and-replace failure, rename
+failure, and cleanup failure. The design does not claim power-loss durability,
+network-filesystem rename atomicity, or safety against an administrator
+changing paths outside the opened directory capability.
 
 ## 13. Alternatives and deferred decisions
 

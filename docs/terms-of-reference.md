@@ -6,10 +6,17 @@
 integrators.
 
 **Companion documents:**
-[Domain context](context.md), [technical design](malarky-design.md), and
-[development roadmap](roadmap.md). No architectural decision records exist yet.
 
-**Last substantive revision:** 10 July 2026
+- [Domain context](context.md)
+- [Technical design](malarky-design.md)
+- [Development roadmap](roadmap.md)
+- [ADR 001](adr-001-source-preserving-semantic-model.md)
+- [ADR 002](adr-002-atomic-mutation-and-file-replacement.md)
+- [ADR 003](adr-003-agent-cli-and-layered-configuration.md)
+
+The three ADRs govern the accepted architecture.
+
+**Last substantive revision:** 22 July 2026
 
 ## 1. Background and motivation
 
@@ -33,8 +40,10 @@ Successful commands edit the source file in place. The invoking agent is
 expected to use version control to inspect or reverse the change.
 
 The matcher presents Markdown spans and blocks as searchable text, but hides
-link destinations and reference definitions. This lets agents describe visible
-document content without matching structural link metadata.
+link, reference, and image destinations, front matter, CriticMarkup delimiters,
+and comments. As defined by the [domain glossary](context.md), semantic
+matching always uses searchable net-result Markdown and preserves hidden
+metadata boundaries.
 
 Matching operates on a semantic rendering of each Markdown block, not on the
 raw source codepoint stream. The semantic view retains a mapping to the
@@ -182,10 +191,12 @@ trip. Multiple qualifying candidates require an explicit selection.
 - Initial usage targets individual chapters and papers rather than
   book-length manuscripts. If agents apply Malarky to substantially larger
   files, acceptable matching latency and memory use are not yet established.
-- Matching uses a conservative built-in policy. An agent can override matching
-  configuration for one invocation, while project-level configuration can set
-  persistent local policy. Invocation settings take precedence over project
-  settings, which take precedence over the built-in default.
+- Matching uses a conservative built-in policy. From highest to lowest
+  precedence, `ortho_config` applies command-line flags, `MALARKY_*`
+  environment variables, an explicit `--config-path` or discovered
+  `.malarky.toml` project file, and built-in defaults. Command-line flags and
+  environment variables are invocation settings; project configuration is
+  persistent local policy.
 - The localized diff for a successful edit uses standard output.
   Diagnostics and errors use standard error, so they cannot corrupt the success
   payload.
@@ -204,8 +215,8 @@ trip. Multiple qualifying candidates require an explicit selection.
   define success?
 - What exact localized-diff format and context size should form the stable
   success-output contract?
-- What guarantees apply to atomic writes, line endings, encodings, symlinks,
-  and malformed Markdown?
+- Which additional power-loss durability and network-filesystem guarantees are
+  valuable beyond the accepted command-level replacement contract?
 
 ## References
 

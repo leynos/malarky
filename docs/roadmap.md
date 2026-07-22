@@ -3,13 +3,16 @@
 This roadmap translates the accepted
 [terms of reference](terms-of-reference.md), the
 [technical design](malarky-design.md), and its normative artefacts under
-`docs/design/` into an outcome-oriented delivery sequence. No Request for
-Comments (RFC) documents or Architecture Decision Records (ADRs) currently
-govern the project.
+`docs/design/` into an outcome-oriented delivery sequence. The governing
+decisions are
+[ADR 001](adr-001-source-preserving-semantic-model.md), [ADR 002](adr-002-atomic-mutation-and-file-replacement.md),
+and [ADR 003](adr-003-agent-cli-and-layered-configuration.md). No Request for
+Comments (RFC) documents currently govern the project.
 
-The roadmap follows GIST: each phase carries a falsifiable idea, each step is a
-workstream that tests part of that idea, and each task is a review-sized
-execution unit. It does not promise dates or durations.
+The roadmap follows Goals, Ideas, Steps, and Tasks (GIST): each phase carries a
+falsifiable idea, each step is a workstream that tests part of that idea, and
+each task is a review-sized execution unit. It does not promise dates or
+durations.
 
 ## 1. Foundational contracts that resist interface drift
 
@@ -195,21 +198,24 @@ later verbs extend. See `malarky-design.md` §§6, 7, and 10.
   - See `malarky-design.md` §§3.3, 7.1, and 12.1.
   - Success: every accepted highlight reparses, and rejected plans leave the
     source unchanged with exit 5.
-- [ ] 3.1.3. Replace the file through the capability-scoped transaction.
-  - Requires 3.1.2 and 1.2.1.
-  - Reject symlinks, create the temporary file beside the target, preserve
-    permissions, synchronize content, detect concurrent identity change, and
-    replace the target.
-  - See `malarky-design.md` §§5.1 and 10.
-  - Success: injected read, short-write, synchronization, identity-check, and
-    rename failures retain the original target and map to exit 7.
-- [ ] 3.1.4. Emit the successful localized unified diff.
-  - Requires 3.1.3 and 1.2.3.
-  - Use the requested path, omit timestamps, and honour the configured context
-    count.
+- [ ] 3.1.3. Generate the successful localized unified diff.
+  - Requires 3.1.2 and 1.2.3.
+  - Generate and buffer the diff from the original and validated prospective
+    bytes before opening a temporary file. Use the requested path, omit
+    timestamps, and honour the configured context count.
   - See `malarky-design.md` §10 and `design/malarky-config.toml`.
-  - Success: standard output contains only the stable diff, standard error is
-    empty, and an empty diff cannot accompany success.
+  - Success: injected diff failures retain the original target, and an empty
+    diff cannot accompany success.
+- [ ] 3.1.4. Replace the file and emit the buffered diff.
+  - Requires 3.1.3 and 1.2.3.
+  - Reject symlinks, create the temporary file beside the target, preserve
+    permissions, and synchronize content. Hold an exclusive replacement lock
+    from content-fingerprint verification through rename, or use an atomic
+    compare-and-replace primitive with the same fingerprint.
+  - See `malarky-design.md` §§5.1 and 10.
+  - Success: injected read, short-write, synchronization, fingerprint, lock,
+    and rename failures retain the original target and map to exit 7. Standard
+    output receives the buffered diff only after replacement succeeds.
 
 ### 3.2. Make matching forgiving without hiding ambiguity
 
@@ -228,8 +234,10 @@ determines whether the default policy is safe. See `malarky-design.md` §6.
     copied from source into a mutation plan.
 - [ ] 3.2.2. Implement indexed ambiguity reports and selection.
   - Requires 3.1.1 and 3.2.1.
-  - Report line, column, tier, and bounded excerpt; accept one-based
-    `--match N`; reject stale out-of-range indexes as usage errors.
+  - Report line, column, tier, bounded excerpt, and a fingerprint of the
+    document and complete ordered candidate set. Accept one-based `--match N`
+    only with that selection token; reject stale tokens and out-of-range
+    indexes as usage errors.
   - See `malarky-design.md` §§6 and 11.
   - Success: an agent can rerun the documented example with `--match` and edit
     only the reported candidate.
@@ -332,8 +340,8 @@ index against the mutation planner. See `malarky-design.md` §§3.2 and 7.2.
 ### 4.4. Apply all safe candidates as one transaction
 
 This step answers whether bulk editing preserves the same safety contract as a
-single mutation. It closes the selection surface required by the ToR. See
-`malarky-design.md` §§6, 7.3, and 12.1.
+single mutation. It closes the selection surface required by the terms of
+reference (ToR). See `malarky-design.md` §§6, 7.3, and 12.1.
 
 - [ ] 4.4.1. Implement `--all` planning for disjoint candidates.
   - Requires steps 4.1-4.3.

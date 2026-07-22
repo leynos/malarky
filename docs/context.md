@@ -23,9 +23,12 @@ text, and retaining highlighted text.
 normalization to both the requested text and semantic text. The initial policy
 normalizes whitespace only.
 
-**Semantic text:** Searchable text derived from a Markdown block. It includes
-the text represented by spans and blocks but excludes link destinations,
-reference definitions, CriticMarkup delimiters, and CriticMarkup comments.
+**Semantic text:** Searchable net-result Markdown derived from a Markdown
+block. It includes visible text represented by spans and blocks but excludes
+link, reference, and image destinations, front matter, CriticMarkup delimiters,
+and comments. Matching always operates on this net-result view, so hidden
+metadata boundaries remain unavailable as candidates. This contract is governed
+by [ADR 001](adr-001-source-preserving-semantic-model.md).
 
 **Source span:** A half-open byte range in the original Markdown source that
 corresponds to semantic text or an existing annotation.

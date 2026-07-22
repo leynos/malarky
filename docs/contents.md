@@ -24,6 +24,28 @@ set.
   spelling, structure, Markdown, Architecture Decision Record (ADR), Request
   for Comments (RFC), and roadmap conventions used by this documentation set.
 
+## Normative design artefacts
+
+- [CLI contract](design/malarky-cli.txt) gives agent integrators the stable
+  verbs, selection controls, output, and exit statuses.
+- [Configuration example](design/malarky-config.toml) gives operators and
+  implementers the supported project keys and built-in values.
+- [Domain types](design/malarky-domain.rs) gives implementers the validated
+  source-map, annotation, and mutation-plan shapes.
+- [Component flow](design/malarky-components.mmd) gives architecture reviewers
+  the ordered parsing, mutation, diff, and replacement pipeline.
+- [Mutation matrix](design/mutation-matrix.md) gives implementers and test
+  authors the operation, inverse, and intersection rules.
+
+## Architecture decision records
+
+- [ADR 001](adr-001-source-preserving-semantic-model.md) explains to
+  implementers why semantic matching uses composed source maps.
+- [ADR 002](adr-002-atomic-mutation-and-file-replacement.md) defines the
+  transaction and concurrency guarantees for implementers.
+- [ADR 003](adr-003-agent-cli-and-layered-configuration.md) defines the
+  invocation, selection, and override contracts for integrators.
+
 ## Rust reference material
 
 - [Reliable testing in Rust via dependency injection](reliable-testing-in-rust-via-dependency-injection.md)

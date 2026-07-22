@@ -11,8 +11,8 @@ flowchart LR
     Overlay --> Planner
     Markdown --> Planner
     Planner --> Validator[Prospective reparse and validator]
-    Validator --> Writer[Same-directory replacement writer]
-    Writer --> Diff[Localized unified diff]
-    Diff --> Agent
+    Validator --> Diff[Generate localized unified diff]
+    Diff --> Writer[Compare-safe same-directory replacement]
+    Writer --> Agent[Emit buffered diff]
     Matcher -. ambiguity .-> CLI
     Validator -. rejection .-> CLI
