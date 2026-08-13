@@ -378,3 +378,27 @@ The following tooling is available in this environment:
 
 These practices help maintain a high-quality codebase and facilitate
 collaboration.
+
+## Fast development builds
+
+`make dev-build` and `make dev-test` compile with the opt-in Cranelift
+backend and the mold linker configured in `tools/dev-fast/config.toml`.
+They require a nightly toolchain and, on Linux, a `mold` binary on the
+`PATH`. The fragment is passed explicitly with `--config`, so release,
+coverage, and verification builds are unaffected; never copy its contents
+into `.cargo/config.toml`, which Cargo applies to every build.
+
+## The dev-fast profile is the standard development path
+
+The standard `make build`, `make test`, `make lint`, and `make typecheck`
+targets already pass `--config tools/dev-fast/config.toml` to every cargo
+invocation they make; this is not an opt-in extra, it is how routine
+development builds, tests, lints, and typechecks run day to day. An
+agent or human who calls `cargo build`, `cargo test`, `cargo clippy`, or
+`cargo check` directly for a development run, rather than going through
+`make`, must pass `--config tools/dev-fast/config.toml` on that
+invocation too. Never apply the fragment to coverage, release, or
+verification builds. Mixing direct-cargo invocations and `make`
+invocations without the flag thrashes the incremental build cache,
+because the two invocations produce different compiler fingerprints for
+what is otherwise the same source tree.

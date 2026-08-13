@@ -1,0 +1,233 @@
+//! Contract test for the repository `Makefile`.
+//!
+//! The dev-fast profile (Cranelift plus mold, configured in
+//! `tools/dev-fast/config.toml`) is the standard development path: the
+//! `build`, `test`, `lint`, and `typecheck` targets must pass
+//! `--config tools/dev-fast/config.toml` to every cargo invocation they
+//! make, and `coverage` must never do so, because it needs the supported
+//! LLVM backend and platform linker for `cargo llvm-cov`. See the "dev-fast
+//! profile is the standard development path" section of `AGENTS.md`.
+//!
+//! This test parses `Makefile` textually rather than semantically, so that
+//! an agent who edits a standard target's recipe without preserving the
+//! `--config` wiring fails locally, before the estate-wide audit does.
+//!
+//! File access goes through a `cap_std` directory handle rooted at the
+//! crate manifest directory rather than `std::fs`, per the estate's
+//! capability-scoped filesystem convention: there is no ambient access to
+//! anything outside the checkout, and the manifest directory is the
+//! meaningful root for a test that inspects its own repository.
+
+use camino::Utf8Path;
+use cap_std::{ambient_authority, fs_utf8::Dir};
+use rstest::rstest;
+
+/// Opens the crate manifest directory as a capability-scoped directory
+/// handle, so file access below stays rooted at the checkout rather than
+/// touching the ambient working directory via `std::fs`.
+fn manifest_dir() -> std::io::Result<Dir> {
+    Dir::open_ambient_dir(env!("CARGO_MANIFEST_DIR"), ambient_authority())
+}
+
+/// Returns the raw text of the repository's root `Makefile`.
+///
+/// This is a fixture, not a test body: it propagates the read error
+/// rather than panicking, so each test decides how to report a failure.
+fn makefile_text() -> std::io::Result<String> { manifest_dir()?.read_to_string("Makefile") }
+
+/// Returns `true` if `makefile` contains a header line starting with
+/// `header`, that is, a line beginning at column zero with `header`
+/// (typically `"<target>:"`).
+fn has_header(makefile: &str, header: &str) -> bool {
+    makefile.lines().any(|line| line.starts_with(header))
+}
+
+/// Extracts the tab-indented recipe lines that immediately follow the
+/// first line starting with `header`, stopping at the next line that is
+/// not tab-indented. Returns an empty string if `header` is not found.
+fn recipe_for(makefile: &str, header: &str) -> String {
+    let mut lines = makefile.lines();
+    let found_header = lines.by_ref().any(|line| line.starts_with(header));
+    if found_header {
+        collect_recipe_lines(lines)
+    } else {
+        String::new()
+    }
+}
+
+/// Collects leading tab-indented lines from `lines` into a single string,
+/// one line per entry, stopping at the first non-indented line.
+fn collect_recipe_lines<'a>(lines: impl Iterator<Item = &'a str>) -> String {
+    let mut recipe = String::new();
+    for line in lines {
+        if !line.starts_with('\t') {
+            break;
+        }
+        recipe.push_str(line);
+        recipe.push('\n');
+    }
+    recipe
+}
+
+/// Returns `true` if `text` case-insensitively matches `dev[-_]fast`.
+fn mentions_dev_fast(text: &str) -> bool {
+    let lower = text.to_lowercase();
+    lower.contains("dev-fast") || lower.contains("dev_fast")
+}
+
+/// Returns `true` if `line` invokes cargo, via the `$(CARGO)` Make
+/// variable or a bare `cargo` word.
+fn invokes_cargo(line: &str) -> bool { line.contains("$(CARGO)") || line.contains("cargo") }
+
+/// Returns the cargo-invoking lines of `recipe` that do not pass
+/// `--config`, so a caller can report exactly which invocation was missed
+/// rather than only that the recipe as a whole lacks the flag somewhere.
+fn cargo_lines_missing_config(recipe: &str) -> Vec<&str> {
+    recipe
+        .lines()
+        .filter(|line| invokes_cargo(line))
+        .filter(|line| !line.contains("--config"))
+        .collect()
+}
+
+/// The standard development targets, and the Makefile header whose recipe
+/// text carries their cargo invocation. `build` is a phony target with an
+/// empty recipe of its own; its cargo invocation lives in the
+/// `target/%/$(TARGET):` pattern rule it depends on, so that header is
+/// checked in its place.
+// Note: the case name deliberately avoids the literal `test`, which
+// collides with rstest's own use of `extern crate test` and silently
+// drops the `#[test]` registration for every case in the group.
+#[rstest]
+#[case::build("build:", "target/%/$(TARGET):")]
+#[case::unit_test("test:", "test:")]
+#[case::lint("lint:", "lint:")]
+#[case::typecheck("typecheck:", "typecheck:")]
+fn standard_targets_apply_dev_fast_config(
+    #[case] target_header: &str,
+    #[case] recipe_header: &str,
+) {
+    let makefile = makefile_text().expect("failed to read Makefile");
+    if !has_header(&makefile, target_header) {
+        // The target does not exist in this Makefile; nothing to assert.
+        return;
+    }
+    let recipe = recipe_for(&makefile, recipe_header);
+    assert!(
+        !recipe.is_empty(),
+        "expected a non-empty recipe for {recipe_header} (implementing {target_header}) in \
+         Makefile; see the \"dev-fast profile is the standard development path\" section of \
+         AGENTS.md"
+    );
+    let missing = cargo_lines_missing_config(&recipe);
+    assert!(
+        missing.is_empty(),
+        "{target_header} (recipe {recipe_header}) has cargo invocation(s) without --config, so \
+         they would skip the dev-fast profile: {missing:?}; see AGENTS.md"
+    );
+    assert!(
+        mentions_dev_fast(&recipe),
+        "{target_header} (recipe {recipe_header}) must reference the dev-fast configuration \
+         fragment (matching /dev[-_]fast/i); see AGENTS.md"
+    );
+}
+
+/// `coverage` needs the supported LLVM backend and platform linker for
+/// `cargo llvm-cov`, so it must never apply the dev-fast profile.
+#[test]
+fn coverage_target_excludes_dev_fast() {
+    let makefile = makefile_text().expect("failed to read Makefile");
+    if !has_header(&makefile, "coverage:") {
+        return;
+    }
+    let recipe = recipe_for(&makefile, "coverage:");
+    assert!(
+        !recipe.is_empty(),
+        "expected a non-empty recipe for the coverage target in Makefile"
+    );
+    assert!(
+        !mentions_dev_fast(&recipe),
+        "coverage must never apply the dev-fast profile (Cranelift/mold); it needs the supported \
+         LLVM backend and platform linker for cargo llvm-cov, per AGENTS.md"
+    );
+}
+
+/// The dev-fast fragment the standard targets reference must actually
+/// exist, or the `--config` flag they pass points nowhere.
+#[test]
+fn dev_fast_fragment_exists() {
+    let relative = Utf8Path::new("tools/dev-fast/config.toml");
+    let found = manifest_dir()
+        .expect("manifest directory must be readable")
+        .is_file(relative);
+    assert!(
+        found,
+        "expected {relative} to exist; it is the dev-fast configuration fragment referenced by \
+         the standard Makefile targets and AGENTS.md"
+    );
+}
+
+/// Runs `make --dry-run <target> CARGO=probe-cargo` in the crate manifest
+/// directory and returns its captured stdout.
+///
+/// This is a fixture, not a test body: it propagates process-spawn and
+/// non-UTF-8-output errors rather than panicking, so the test decides how
+/// to report a failure.
+fn dry_run_dev_fast_target(target: &str) -> std::io::Result<String> {
+    let output = std::process::Command::new("make")
+        .arg("--dry-run")
+        .arg(target)
+        .arg("CARGO=probe-cargo")
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()?;
+    if !output.status.success() {
+        return Err(std::io::Error::other(format!(
+            "make --dry-run {target} CARGO=probe-cargo exited with {}: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        )));
+    }
+    String::from_utf8(output.stdout)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))
+}
+
+/// Returns the byte offset of the first case-insensitive `dev[-_]fast`
+/// match in `text`, or `None` if there is no match.
+fn dev_fast_position(text: &str) -> Option<usize> {
+    let lower = text.to_lowercase();
+    lower.find("dev-fast").or_else(|| lower.find("dev_fast"))
+}
+
+/// `make --dry-run dev-build|dev-test CARGO=probe-cargo` must emit
+/// `probe-cargo`, then `--config`, then the dev-fast fragment reference,
+/// in that order: proof that `CARGO` is genuinely substitutable in the
+/// dev-fast block without needing the nightly toolchain or `mold`
+/// installed to exercise it for real.
+#[rstest]
+#[case::dev_build("dev-build")]
+#[case::dev_test("dev-test")]
+fn dev_fast_targets_substitute_cargo(#[case] target: &str) {
+    let stdout = dry_run_dev_fast_target(target).expect("make --dry-run should run successfully");
+    let cargo_pos = stdout.find("probe-cargo");
+    let config_pos = stdout.find("--config");
+    let dev_fast_pos = dev_fast_position(&stdout);
+    assert!(
+        cargo_pos.is_some(),
+        "make --dry-run {target} CARGO=probe-cargo did not substitute probe-cargo into the \
+         emitted command, so CARGO is not injectable there: {stdout:?}"
+    );
+    assert!(
+        config_pos.is_some(),
+        "make --dry-run {target} CARGO=probe-cargo did not emit --config: {stdout:?}"
+    );
+    assert!(
+        dev_fast_pos.is_some(),
+        "make --dry-run {target} CARGO=probe-cargo did not reference the dev-fast configuration \
+         fragment: {stdout:?}"
+    );
+    assert!(
+        cargo_pos < config_pos && config_pos < dev_fast_pos,
+        "expected probe-cargo, then --config, then the dev-fast fragment reference, in that \
+         order, in `make --dry-run {target} CARGO=probe-cargo` output: {stdout:?}"
+    );
+}
