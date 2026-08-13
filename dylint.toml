@@ -1,0 +1,14 @@
+# Configuration for the Whitaker Dylint suite.
+#
+# Crates excluded from the no_std_fs_operations lint because they legitimately
+# require ambient std::fs access:
+# - makefile_contract: the tests/makefile_contract.rs contract test reads the
+#   repository's own root Makefile via a CARGO_MANIFEST_DIR-relative path to
+#   assert the dev-fast wiring is intact. This is an inherently ambient,
+#   checkout-relative read of the crate's own source tree, not a
+#   capability-scoped filesystem operation; there is no meaningful root
+#   directory handle to inject for a self-inspecting test like this one.
+[no_std_fs_operations]
+excluded_crates = [
+    "makefile_contract",
+]
