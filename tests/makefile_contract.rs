@@ -166,3 +166,68 @@ fn dev_fast_fragment_exists() {
          the standard Makefile targets and AGENTS.md"
     );
 }
+
+/// Runs `make --dry-run <target> CARGO=probe-cargo` in the crate manifest
+/// directory and returns its captured stdout.
+///
+/// This is a fixture, not a test body: it propagates process-spawn and
+/// non-UTF-8-output errors rather than panicking, so the test decides how
+/// to report a failure.
+fn dry_run_dev_fast_target(target: &str) -> std::io::Result<String> {
+    let output = std::process::Command::new("make")
+        .arg("--dry-run")
+        .arg(target)
+        .arg("CARGO=probe-cargo")
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .output()?;
+    if !output.status.success() {
+        return Err(std::io::Error::other(format!(
+            "make --dry-run {target} CARGO=probe-cargo exited with {}: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        )));
+    }
+    String::from_utf8(output.stdout)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))
+}
+
+/// Returns the byte offset of the first case-insensitive `dev[-_]fast`
+/// match in `text`, or `None` if there is no match.
+fn dev_fast_position(text: &str) -> Option<usize> {
+    let lower = text.to_lowercase();
+    lower.find("dev-fast").or_else(|| lower.find("dev_fast"))
+}
+
+/// `make --dry-run dev-build|dev-test CARGO=probe-cargo` must emit
+/// `probe-cargo`, then `--config`, then the dev-fast fragment reference,
+/// in that order: proof that `CARGO` is genuinely substitutable in the
+/// dev-fast block without needing the nightly toolchain or `mold`
+/// installed to exercise it for real.
+#[rstest]
+#[case::dev_build("dev-build")]
+#[case::dev_test("dev-test")]
+fn dev_fast_targets_substitute_cargo(#[case] target: &str) {
+    let stdout = dry_run_dev_fast_target(target).expect("make --dry-run should run successfully");
+    let cargo_pos = stdout.find("probe-cargo");
+    let config_pos = stdout.find("--config");
+    let dev_fast_pos = dev_fast_position(&stdout);
+    assert!(
+        cargo_pos.is_some(),
+        "make --dry-run {target} CARGO=probe-cargo did not substitute probe-cargo into the \
+         emitted command, so CARGO is not injectable there: {stdout:?}"
+    );
+    assert!(
+        config_pos.is_some(),
+        "make --dry-run {target} CARGO=probe-cargo did not emit --config: {stdout:?}"
+    );
+    assert!(
+        dev_fast_pos.is_some(),
+        "make --dry-run {target} CARGO=probe-cargo did not reference the dev-fast configuration \
+         fragment: {stdout:?}"
+    );
+    assert!(
+        cargo_pos < config_pos && config_pos < dev_fast_pos,
+        "expected probe-cargo, then --config, then the dev-fast fragment reference, in that \
+         order, in `make --dry-run {target} CARGO=probe-cargo` output: {stdout:?}"
+    );
+}
