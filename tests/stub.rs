@@ -5,6 +5,11 @@
 //! functionality and real tests. Do not keep this stub as permanent coverage.
 
 #[test]
+#[expect(
+    clippy::disallowed_methods,
+    reason = "disposable stub reads CARGO_MANIFEST_DIR directly; delete this \
+              file, and the exception with it, once real tests replace it"
+)]
 fn replace_this_stub_when_real_tests_exist() {
     assert!(
         std::env::var_os("CARGO_MANIFEST_DIR").is_some(),
