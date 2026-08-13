@@ -8,6 +8,11 @@ TARGET ?= malarky
 USER_WHITAKER := $(HOME)/.local/bin/whitaker
 USER_BIN_PATH := $(HOME)/.cargo/bin:$(HOME)/.local/bin:$(HOME)/.bun/bin
 CARGO ?= cargo
+# Standard development builds, tests, lints, and typechecks use the
+# dev-fast profile (see the appended block below and AGENTS.md); the
+# variable is restated here, not moved, so the targets that use it below
+# can see it without touching the Wave 1 block itself.
+DEV_FAST_CONFIG ?= tools/dev-fast/config.toml
 BUILD_JOBS ?=
 RUST_FLAGS ?=
 RUST_FLAGS := -D warnings $(RUST_FLAGS)
@@ -32,11 +37,11 @@ clean: ## Remove build artifacts
 	$(CARGO) clean
 
 test: ## Run tests with warnings treated as errors
-	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) $(TEST_CMD) $(TEST_FLAGS) $(BUILD_JOBS)
-	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) test --doc --workspace --all-features
+	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) --config "$(DEV_FAST_CONFIG)" $(TEST_CMD) $(TEST_FLAGS) $(BUILD_JOBS)
+	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) --config "$(DEV_FAST_CONFIG)" test --doc --workspace --all-features
 
 target/%/$(TARGET): ## Build binary in debug or release mode
-	$(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release) --bin $(TARGET)
+	$(CARGO) $(if $(findstring release,$(@)),,--config "$(DEV_FAST_CONFIG)") build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release) --bin $(TARGET)
 
 coverage: ## Generate lcov coverage with lld for llvm-tools compatibility
 	@echo "coverage linker flags: $(COVERAGE_LINKER_FLAGS)"
@@ -47,13 +52,13 @@ coverage: ## Generate lcov coverage with lld for llvm-tools compatibility
 		$(CARGO) llvm-cov --lcov --output-path lcov.info $(TEST_FLAGS)
 
 lint: ## Run Clippy with warnings denied
-	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --no-deps
-	$(CARGO) clippy $(CLIPPY_FLAGS)
+	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) --config "$(DEV_FAST_CONFIG)" doc --no-deps
+	$(CARGO) --config "$(DEV_FAST_CONFIG)" clippy $(CLIPPY_FLAGS)
 	@echo "Whitaker binary: $(WHITAKER)"
 	PATH="$(USER_BIN_PATH):$(PATH)" RUSTFLAGS="$(RUST_FLAGS)" $(WHITAKER) --all -- $(CARGO_FLAGS)
 
 typecheck: ## Type-check without building
-	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) check $(CARGO_FLAGS)
+	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) --config "$(DEV_FAST_CONFIG)" check $(CARGO_FLAGS)
 
 fmt: ## Format Rust and Markdown sources
 	$(CARGO) +nightly fmt --all
