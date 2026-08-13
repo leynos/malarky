@@ -11,10 +11,12 @@ Application projects render `src/main.rs`, `src/lib.rs`, release automation, and
 `[package.metadata.binstall]` metadata for binary installation.
 
 Development builds use the standard LLVM backend for debug code
-generation. On Linux targets, `.cargo/config.toml` configures clang to
-link with `mold` so local debug builds link quickly. Coverage generation
-uses `lld` instead because LLVM coverage tools expect LLVM-compatible
-linker behaviour.
+generation by default. Only the automatic activation of Cranelift was
+removed; the Cranelift component itself remains part of the pinned
+toolchain, ready for the opt-in path described below. On Linux targets,
+`.cargo/config.toml` configures clang to link with `mold` so local
+debug builds link quickly. Coverage generation uses `lld` instead
+because LLVM coverage tools expect LLVM-compatible linker behaviour.
 
 For a faster local edit-compile-test loop, `make dev-build` and
 `make dev-test` apply the opt-in Cranelift backend and mold linker

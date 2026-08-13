@@ -29,6 +29,11 @@ For a faster local edit-compile-test loop, `make dev-build` and
 configured in `tools/dev-fast/config.toml`. This fragment is passed
 explicitly with `cargo --config`, so it never touches release,
 coverage, or verification builds, and it requires a nightly toolchain.
+The pinned toolchain retains the `rustc-codegen-cranelift-preview` and
+`llvm-tools-preview` components that this fragment and `make coverage`
+depend on; `tools/dev-fast/config.toml` is what controls whether
+Cranelift is actually activated for a given build, not the toolchain
+pin itself.
 
 Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
 full generated workflow locally on Linux.
