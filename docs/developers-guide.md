@@ -33,6 +33,33 @@ coverage, or verification builds, and it requires a nightly toolchain.
 Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
 full generated workflow locally on Linux.
 
+## Lint baseline
+
+`Cargo.toml`'s `[lints.clippy]`, `[lints.rust]`, and `[lints.rustdoc]`
+tables carry this project's lint policy directly, since Malarky is a
+single crate with no `[workspace]` table to inherit from. They follow
+the Rust estate's phase 2 baseline, so treat `Cargo.toml` as the
+authoritative list rather than duplicating it here; the one addition
+on top of that baseline is `pedantic`, kept at `warn` rather than
+`deny`.
+
+Where a lint fires on a genuine deferral rather than a real defect, add
+`#[expect(clippy::<lint>, reason = "…")]` at the site, never `allow`.
+An `#[expect]` warns the moment the site stops triggering the lint, so
+fixed sites surface on their own instead of leaving a silent, stale
+suppression behind.
+
+`clippy.toml` complements the lint tables: it sets the CodeScene-aligned
+complexity thresholds and lists the raw `std::env` accessors
+(`var`, `var_os`, `vars`, `vars_os`, `set_var`, `remove_var`) as
+`disallowed-methods`, each with a reason pointing at injecting an
+environment reader instead of reading the process environment
+directly.
+
+The pinned nightly toolchain in `rust-toolchain.toml` supplies the
+`rustfmt`, `clippy`, and `rust-analyzer` components these checks and
+IDE tooling depend on.
+
 ### Security audit ignores
 
 Security audit jobs may set `CARGO_AUDIT_IGNORES` for narrowly scoped RustSec
