@@ -18,10 +18,17 @@ container-backed checks in parallel.
 
 ## Tooling
 
-Development builds use Cranelift for debug code generation. On Linux targets,
-`.cargo/config.toml` configures clang to link with `mold` so debug builds link
-quickly. Coverage generation uses `lld` because LLVM coverage tooling expects
-LLVM-compatible linker behaviour.
+Development builds use the standard LLVM backend for debug code
+generation. On Linux targets, `.cargo/config.toml` configures clang to
+link with `mold` so debug builds link quickly. Coverage generation uses
+`lld` because LLVM coverage tooling expects LLVM-compatible linker
+behaviour.
+
+For a faster local edit-compile-test loop, `make dev-build` and
+`make dev-test` apply the opt-in Cranelift backend and mold linker
+configured in `tools/dev-fast/config.toml`. This fragment is passed
+explicitly with `cargo --config`, so it never touches release,
+coverage, or verification builds, and it requires a nightly toolchain.
 
 Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
 full generated workflow locally on Linux.
