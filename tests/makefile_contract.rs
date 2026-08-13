@@ -11,19 +11,29 @@
 //! This test parses `Makefile` textually rather than semantically, so that
 //! an agent who edits a standard target's recipe without preserving the
 //! `--config` wiring fails locally, before the estate-wide audit does.
+//!
+//! File access goes through a `cap_std` directory handle rooted at the
+//! crate manifest directory rather than `std::fs`, per the estate's
+//! capability-scoped filesystem convention: there is no ambient access to
+//! anything outside the checkout, and the manifest directory is the
+//! meaningful root for a test that inspects its own repository.
 
-use std::{fs, io, path::PathBuf};
-
+use camino::Utf8Path;
+use cap_std::{ambient_authority, fs_utf8::Dir};
 use rstest::rstest;
+
+/// Opens the crate manifest directory as a capability-scoped directory
+/// handle, so file access below stays rooted at the checkout rather than
+/// touching the ambient working directory via `std::fs`.
+fn manifest_dir() -> std::io::Result<Dir> {
+    Dir::open_ambient_dir(env!("CARGO_MANIFEST_DIR"), ambient_authority())
+}
 
 /// Returns the raw text of the repository's root `Makefile`.
 ///
 /// This is a fixture, not a test body: it propagates the read error
 /// rather than panicking, so each test decides how to report a failure.
-fn makefile_text() -> io::Result<String> {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("Makefile");
-    fs::read_to_string(&path)
-}
+fn makefile_text() -> std::io::Result<String> { manifest_dir()?.read_to_string("Makefile") }
 
 /// Returns `true` if `makefile` contains a header line starting with
 /// `header`, that is, a line beginning at column zero with `header`
@@ -146,11 +156,13 @@ fn coverage_target_excludes_dev_fast() {
 /// exist, or the `--config` flag they pass points nowhere.
 #[test]
 fn dev_fast_fragment_exists() {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tools/dev-fast/config.toml");
+    let relative = Utf8Path::new("tools/dev-fast/config.toml");
+    let found = manifest_dir()
+        .expect("manifest directory must be readable")
+        .is_file(relative);
     assert!(
-        path.is_file(),
-        "expected {} to exist; it is the dev-fast configuration fragment referenced by the \
-         standard Makefile targets and AGENTS.md",
-        path.display()
+        found,
+        "expected {relative} to exist; it is the dev-fast configuration fragment referenced by \
+         the standard Makefile targets and AGENTS.md"
     );
 }

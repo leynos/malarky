@@ -102,4 +102,6 @@ invalid_codeblock_attributes        = "deny"
 unescaped_backticks                 = "deny"
 
 [dev-dependencies]
+camino = "1.2.5"
+cap-std = { version = "4.0.2", features = ["fs_utf8"] }
 rstest = "0.26.1"
