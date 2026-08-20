@@ -35,11 +35,21 @@ boundaries used by every later slice. See `malarky-design.md` §§3-4 and
   newtypes.
   - Define source spans, mapped semantic segments, candidates, annotations,
     source edits, and mutation plans without filesystem or terminal I/O.
+  - Add parameterized unit tests for accepted and rejected constructor
+    boundaries: complete, monotonic, in-range UTF-8 segment maps; ordered,
+    in-range UTF-8 cross-segment joins; kind-correct, contained annotation
+    payloads with replacement `OLD` before `NEW`; and descending, disjoint
+    mutation plans.
+  - Cover empty and single-edit plans, adjacent edits, valid empty insertions,
+    and rejected overlapping, nested, equal-start, ascending, and
+    equal-boundary empty-insertion plans. Add property tests over Unicode,
+    source mappings, joins, payload ranges, and edit ranges.
   - Keep `main` responsible only for configuration, dispatch, output, and exit
     status mapping.
   - See `malarky-design.md` §§3 and 4.1.
   - Success: the public and internal type boundaries compile with missing
-    documentation and Clippy warnings denied.
+    documentation and Clippy warnings denied, and their constructor tests prove
+    mapping safety, containment, ordering, and disjointness.
 - [ ] 1.1.2. Define typed command outcomes and the stable failure taxonomy.
   - Requires 1.1.1.
   - Represent success, no match, ambiguity, invalid mutation, parse failure,

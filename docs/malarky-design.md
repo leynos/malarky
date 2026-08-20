@@ -23,7 +23,7 @@ correctness and command contract.
 - [ADR 003](adr-003-agent-cli-and-layered-configuration.md): stabilize the
   agent CLI and layered configuration
 
-**Last substantive revision:** 22 July 2026
+**Last substantive revision:** 20 August 2026
 
 ## 1. Design context
 
@@ -425,6 +425,30 @@ The architecture has invariants that example-based tests alone do not cover.
 9. **Determinism:** Equal document bytes, arguments, and configuration produce
    equal ordered candidates and output.
 10. **All-or-nothing selection:** `--all` applies every selected plan or none.
+
+Production constructor tests must cover both acceptance and rejection at each
+domain boundary:
+
+- `MappedSegment` accepts only complete, monotonic maps whose source offsets
+  are in range and on UTF-8 boundaries. Tests must reject missing, reordered,
+  out-of-range, and code-point-splitting boundaries.
+- `CrossSegmentJoin` accepts only ordered endpoints that are in range and on
+  UTF-8 boundaries. Tests must reject reversed, out-of-range, and
+  code-point-splitting endpoints.
+- `Annotation` accepts only the payload shape required by its kind, with every
+  payload contained by the annotation source. Replacement payloads must place
+  `OLD` before `NEW`; tests must reject the wrong shape, payloads outside the
+  annotation source, and reversed or overlapping replacement payloads.
+- `MutationPlan` accepts edits only in descending start-offset order with
+  disjoint source spans. Tests must accept empty plans, single edits, adjacent
+  edits, and empty insertions at unique ordered boundaries. They must reject
+  overlapping, nested, equal-start, ascending, and equal-boundary empty
+  insertion cases.
+
+Parameterized unit tests must exercise these explicit accepted and rejected
+boundaries. Property tests must generate Unicode source, mapping, join,
+payload, and edit ranges to prove UTF-8 safety, completeness, monotonicity,
+containment, ordering, and disjointness over broader inputs.
 
 Property-based generators should produce Markdown block trees, Unicode text,
 whitespace variants, CriticMarkup overlays, and intersecting source ranges.
