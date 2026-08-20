@@ -24,4 +24,4 @@ CriticMarkup.
 | Any mutation            | Fully encompassed annotation or Markdown span     | Permit the plan if the result reparses and validates  |
 | Any mutation            | Partially intersected annotation or Markdown span | Reject without changing the file                      |
 | Any mutation            | Target crosses a Markdown block                   | Reject without changing the file                      |
-| `--all` mutation        | Selected source spans overlap                     | Reject the complete command without changing the file |
+| `--all` mutation        | Selected source spans or planned edits overlap    | Reject the complete command without changing the file |

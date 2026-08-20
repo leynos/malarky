@@ -62,6 +62,6 @@ Exit status:
   3  No match
   4  Multiple matches require --match or --all
   5  Invalid CriticMarkup mutation or annotation intersection
-  6  Markdown or CriticMarkup parse failure
+  6  Mutation or inspection parse failure before mutation or inspection
   7  File read, temporary-write, or replacement failure
-  8  Validation found one or more document errors
+  8  validate found invalid UTF-8, CriticMarkup, Markdown, or source-map results

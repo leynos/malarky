@@ -16,7 +16,7 @@ integrators.
 
 The three ADRs govern the accepted architecture.
 
-**Last substantive revision:** 22 July 2026
+**Last substantive revision:** 20 August 2026
 
 ## 1. Background and motivation
 
@@ -36,8 +36,8 @@ deletion, insertion, highlighting, comments, and replacement.
 The source document should retain its existing layout apart from the inserted
 annotation.
 
-Successful commands edit the source file in place. The invoking agent is
-expected to use version control to inspect or reverse the change.
+Successful mutation commands edit the source file in place. The invoking agent
+is expected to use version control to inspect or reverse the change.
 
 The matcher presents Markdown spans and blocks as searchable text, but hides
 link, reference, and image destinations, front matter, CriticMarkup delimiters,
@@ -47,7 +47,7 @@ metadata boundaries.
 
 Matching operates on a semantic rendering of each Markdown block, not on the
 raw source codepoint stream. The semantic view retains a mapping to the
-original source span so an edit does not rewrite unrelated Markdown syntax or
+original source span, so an edit does not rewrite unrelated Markdown syntax or
 formatting.
 
 Existing CriticMarkup is exposed to matching through the net result of its
@@ -93,6 +93,8 @@ ambiguity failures, source preservation, and compact diff feedback. The
 
 ## 4. Users and stakeholders
 
+Table 1: Stakeholder groups and their relationship to Malarky.
+
 | Group                       | Relationship to Malarky                                         |
 | --------------------------- | --------------------------------------------------------------- |
 | Line-editor agents          | Primary users                                                   |
@@ -128,7 +130,7 @@ trip. Multiple qualifying candidates require an explicit selection.
   matching. Keep later normalization tiers explicit, configurable, and
   independently testable.
 - Apply a sole qualifying match automatically.
-- Edit the selected Markdown file in place.
+- Edit the selected Markdown file in place after a successful mutation command.
 - Match the visible textual result of existing CriticMarkup rather than
   its annotation delimiters or comments.
 - Reject cross-block annotations and unsafe partial intersections with
@@ -141,7 +143,7 @@ trip. Multiple qualifying candidates require an explicit selection.
   cross-block, or partially intersecting CriticMarkup. This is lower priority
   than the core annotation and matching workflow.
 - Produce stable, compact diagnostics suitable for agents.
-- Emit a localized diff after every successful edit so the agent can
+- Emit a localized diff after every successful edit, so the agent can
   verify the result without rereading the document.
 
 ### 6.2 Non-goals
@@ -208,6 +210,8 @@ trip. Multiple qualifying candidates require an explicit selection.
 
 - The CriticMarkup syntax is the external annotation contract.
 - The Rust `markdown` crate is the intended Markdown parser.
+- `ortho_config` is the selected command-parsing and layered-configuration
+  dependency.
 
 ## 9. Open questions
 
@@ -237,9 +241,10 @@ context, normalized match, and ambiguous match.
 
 ## Design handoff candidates
 
-- Evaluate `leynos/ortho-config` for layered configuration. Its documented
-  precedence and command-line/configuration-file support fit Malarky's required
-  override model, but the dependency choice belongs in the technical design.
+- Record the selected use of `leynos/ortho-config` for layered configuration in
+  [ADR 003](adr-003-agent-cli-and-layered-configuration.md) and the
+  [technical design](malarky-design.md). Its documented precedence and
+  command-line/configuration-file support fit Malarky's override model.
 - Represent semantic text as source-mapped block spans. Prior art demonstrates
   that normalized matching without a safe mapping back to original source can
   alter unrelated formatting.

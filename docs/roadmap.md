@@ -42,8 +42,9 @@ boundaries used by every later slice. See `malarky-design.md` §§3-4 and
     mutation plans.
   - Cover empty and single-edit plans, adjacent edits, valid empty insertions,
     and rejected overlapping, nested, equal-start, ascending, and
-    equal-boundary empty-insertion plans. Add property tests over Unicode,
-    source mappings, joins, payload ranges, and edit ranges.
+    equal-boundary empty-insertion plans. Add `proptest` 1.10 as a development
+    dependency and implement property tests over Unicode, block source maps,
+    joins, payload ranges, and edit ranges.
   - Keep `main` responsible only for configuration, dispatch, output, and exit
     status mapping.
   - See `malarky-design.md` §§3 and 4.1.
@@ -65,8 +66,8 @@ defaults before commands gain behaviour. It settles precedence and rejects
 invalid combinations early. See `malarky-design.md` §8,
 `design/malarky-cli.txt`, and `design/malarky-config.toml`.
 
-- [ ] 1.2.1. Add the pinned `markdown`, `ortho_config`, `similar`, and
-  `tempfile` dependencies with bounded adapter modules.
+- [ ] 1.2.1. Add the pinned `markdown`, `ortho_config`, `similar`, `tempfile`,
+  `cap-std`, and `camino` dependencies with bounded adapter modules.
   - Requires 1.1.1.
   - Record each dependency's ownership boundary in the developer guide.
   - See `malarky-design.md` §2.
@@ -81,11 +82,13 @@ invalid combinations early. See `malarky-design.md` §8,
     combinations exit 2 without reading a document.
 - [ ] 1.2.3. Implement layered matching and diff configuration.
   - Requires 1.2.2.
-  - Compose built-in defaults, discovered `.malarky.toml`, `MALARKY_*`
-    environment variables, and command-line overrides in documented order.
+  - Compose built-in defaults, a discovered `.malarky.toml` or the project file
+    selected by `--config-path`, `MALARKY_*` environment variables, and
+    command-line overrides in documented order.
   - See `malarky-design.md` §8 and `design/malarky-config.toml`.
   - Success: provenance-aware scenarios demonstrate command line over
-    environment, environment over file, and file over defaults.
+    environment, environment over either project file, either project file over
+    defaults, and explicit `--config-path` selection instead of discovery.
 
 ### 1.3. Establish a source-fidelity corpus
 
@@ -144,8 +147,8 @@ without losing source identity. A successful result unlocks all matchers. See
 - [ ] 2.2.1. Adapt `markdown::to_mdast` into source-mapped semantic blocks.
   - Requires 2.1.1.
   - Compose mdast positions with overlay projection maps and exclude link
-    destinations, reference definitions, image destinations, metadata, and
-    comments.
+    destinations, reference definitions, image destinations, front matter,
+    CriticMarkup delimiters, and comments.
   - Treat code, emphasis, links labels, and other visible spans as semantic
     text while retaining their span intervals.
   - See `malarky-design.md` §§3.1 and 5.3.

@@ -57,12 +57,15 @@ content is applied as source. Malarky adopts three consequences:
 
 The design uses these Rust dependencies:
 
-| Dependency         | Purpose                                                    | Decision                                                              |
-| ------------------ | ---------------------------------------------------------- | --------------------------------------------------------------------- |
-| `markdown` 1.0     | Markdown abstract syntax tree (mdast) and source positions | Required by the project; wrap it behind a parser adapter              |
-| `ortho_config` 0.8 | Command parsing and layered configuration                  | Use its defaults, file, environment, and command-line precedence      |
-| `similar` 3.1      | Unified success diff                                       | Use line diffs with three context lines by default                    |
-| `tempfile` 3.27    | Same-directory replacement file                            | Use only behind the filesystem adapter; do not claim crash durability |
+| Dependency            | Purpose                                                    | Decision                                                                       |
+| --------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `markdown` 1.0        | Markdown abstract syntax tree (mdast) and source positions | Required by the project; wrap it behind a parser adapter                       |
+| `ortho_config` 0.8    | Command parsing and layered configuration                  | Use its defaults, file, environment, and command-line precedence               |
+| `similar` 3.1         | Unified success diff                                       | Use line diffs with three context lines by default                             |
+| `tempfile` 3.27       | Same-directory replacement file                            | Use only behind the filesystem adapter; do not claim crash durability          |
+| `cap-std`             | Capability-scoped filesystem access                        | Use `cap_std::fs_utf8::Dir` for directory access and symlink-safe replacement  |
+| `camino`              | UTF-8 path representation                                  | Keep file and diagnostic paths UTF-8 without `std::path` conversion            |
+| `proptest` 1.10 (dev) | Generated invariant tests                                  | Exercise Unicode, source-map, range, containment, and mutation-plan invariants |
 
 Table 1: Initial external dependencies and their bounded responsibilities.
 
@@ -138,6 +141,11 @@ external representation and side effects.
 Figure 1 shows the mutation path. Dashed edges return non-mutating outcomes to
 the command boundary.
 
+Screen-reader description: the normal flow runs from Agent to CLI, Reader,
+Overlay, Projection, Markdown, Semantic, Matcher, Selector, Planner, Validator,
+Diff, Writer, and back to Agent. Overlay and Markdown also supply the Planner.
+Matcher ambiguity and Validator rejection return to the CLI without mutation.
+
 ```mermaid
 flowchart LR
     Agent[Editing or critic agent] --> CLI[CLI and layered configuration]
@@ -185,9 +193,10 @@ filesystem adapters prevent `main` from accumulating domain logic.
 
 The reader records a UTF-8 byte-order mark, line-ending style, file
 permissions, and file identity before parsing. Invalid UTF-8 produces exit
-status 6 without creating a temporary file. Mixed line endings are preserved
-because mutation edits operate on original byte ranges rather than a normalized
-copy.
+status 8 for `validate`, or exit status 6 when a mutation or inspection command
+cannot parse before mutation or inspection. Neither path creates a temporary
+file. Mixed line endings are preserved because mutation edits operate on
+original byte ranges rather than a normalized copy.
 
 The filesystem adapter rejects symbolic-link input. Replacing a symlink path
 would otherwise replace the link rather than its target on some platforms and
@@ -385,15 +394,15 @@ invariant violation because every successful mutation must change the file.
 
 ## 11. Failure model
 
-| Failure                                                          | Exit | Mutation                         |
-| ---------------------------------------------------------------- | ---: | -------------------------------- |
-| Invalid arguments or configuration                               | 2    | None                             |
-| No candidate                                                     | 3    | None                             |
-| Multiple candidates without selection                            | 4    | None                             |
-| Cross-block, partial-intersection, or invalid inverse            | 5    | None                             |
-| Invalid UTF-8, CriticMarkup, Markdown, or source map             | 6    | None                             |
-| Read, temporary-write, fingerprint, lock, or replacement failure | 7    | None or original target retained |
-| `validate` finds document errors                                 | 8    | None                             |
+| Failure                                                                 | Exit | Mutation                         |
+| ----------------------------------------------------------------------- | ---: | -------------------------------- |
+| Invalid arguments or configuration                                      | 2    | None                             |
+| No candidate                                                            | 3    | None                             |
+| Multiple candidates without selection                                   | 4    | None                             |
+| Cross-block, partial-intersection, or invalid inverse                   | 5    | None                             |
+| Mutation or inspection parse failure before mutation or inspection      | 6    | None                             |
+| Read, temporary-write, fingerprint, lock, or replacement failure        | 7    | None or original target retained |
+| `validate` detects invalid UTF-8, CriticMarkup, Markdown, or source map | 8    | None                             |
 
 Table 3: Stable failure classes and file-mutation guarantees.
 
