@@ -435,6 +435,11 @@ The architecture has invariants that example-based tests alone do not cover.
    equal ordered candidates and output.
 10. **All-or-nothing selection:** `--all` applies every selected plan or none.
 
+`SemanticBlock` construction must reject segments or joins from another source
+map, unordered segments, invalid joins, or spans outside its source extent. The
+opaque source-map identity must make ranges from distinct documents unequal and
+unsliceable; unit and property tests must verify those rejection paths.
+
 Production constructor tests must cover both acceptance and rejection at each
 domain boundary:
 

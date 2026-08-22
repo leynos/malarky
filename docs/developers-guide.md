@@ -11,6 +11,15 @@ available. `make audit` derives the Rust workspace root with `cargo metadata`,
 logs workspace member manifests, and runs `cargo audit` once from the workspace
 root. `make coverage` uses `cargo llvm-cov` with `lld`.
 
+
+## Planned Malarky test ownership
+
+When implementation begins, pure `document`, `matching`, and `mutation` modules
+own their focused unit and `proptest` invariant tests. Command modules own
+behavioural command-contract tests, while filesystem adapters own injected I/O
+failure tests. The [technical design](malarky-design.md#12-verification)
+defines the required properties and combination coverage.
+
 GitHub Actions Act validation lives in `.github/workflows/act-validation.yml`.
 The main `.github/workflows/ci.yml` workflow deliberately does not run
 `make test WITH_ACT=1`; the separate Act workflow runs those slower

@@ -21,6 +21,9 @@ use domain::{
 };
 use proptest::prelude::*;
 
+#[path = "domain_design_contracts/boundaries.rs"]
+mod boundaries;
+
 macro_rules! require {
     ($value:expr, $message:literal $(,)?) => {{
         let Some(resolved) = $value else {

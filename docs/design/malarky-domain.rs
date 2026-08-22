@@ -11,16 +11,14 @@ pub struct Utf8SourceMap<'source> {
     identity: Rc<SourceMapIdentity>,
 }
 impl<'source> Utf8SourceMap<'source> {
-    /// Associate a source map with original UTF-8 source.
+    #[doc = include_str!("malarky-domain-docs/utf8-source-map-new.md")]
     pub fn new(source: &'source str) -> Self {
         Self {
             source,
             identity: Rc::new(SourceMapIdentity),
         }
     }
-    /// Return the source text selected by a span from this source map.
-    ///
-    /// A span belonging to another source map returns `None`.
+    #[doc = include_str!("malarky-domain-docs/utf8-source-map-slice.md")]
     pub fn slice(&self, span: &SourceSpan) -> Option<&'source str> {
         span.belongs_to(self)
             .then(|| self.source.get(span.range()))?
@@ -43,34 +41,7 @@ impl PartialEq for SourceSpan {
 }
 impl Eq for SourceSpan {}
 impl SourceSpan {
-    /// Create a non-inverted span whose offsets are UTF-8 boundaries.
-    ///
-    /// # Parameters
-    ///
-    /// - `source_map`: the original UTF-8 source map against which both offsets are validated.
-    /// - `start`: the inclusive source-byte offset.
-    /// - `end`: the exclusive source-byte offset.
-    ///
-    /// # Returns
-    ///
-    /// `Some(SourceSpan)` when `start <= end`, both offsets are in bounds, and
-    /// neither offset splits a multibyte code point; otherwise, `None`.
-    /// Empty spans are valid at any code-point boundary.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use malarky_domain::{SourceSpan, Utf8SourceMap};
-    ///
-    /// let source = Utf8SourceMap::new("aéz");
-    /// assert_eq!(
-    ///     SourceSpan::new(&source, 1, 3).map(|span| span.range()),
-    ///     Some(1..3)
-    /// );
-    /// assert!(SourceSpan::new(&source, 2, 3).is_none());
-    /// assert!(SourceSpan::new(&source, 3, 1).is_none());
-    /// assert!(SourceSpan::new(&source, 3, 3).is_some());
-    /// ```
+    #[doc = include_str!("malarky-domain-docs/source-span-new.md")]
     pub fn new(source_map: &Utf8SourceMap<'_>, start: usize, end: usize) -> Option<Self> {
         (start <= end
             && source_map.source.is_char_boundary(start)
@@ -81,58 +52,13 @@ impl SourceSpan {
             end,
         })
     }
-    /// Return the original source-byte range.
+    #[doc = include_str!("malarky-domain-docs/source-span-range.md")]
     pub const fn range(&self) -> std::ops::Range<usize> { self.start..self.end }
-    /// Report whether two non-empty spans overlap.
-    ///
-    /// # Parameters
-    ///
-    /// - `other`: the span to compare with this span.
-    ///
-    /// # Returns
-    ///
-    /// `true` only when both spans share at least one source byte. Empty and
-    /// adjacent spans do not overlap.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use malarky_domain::{SourceSpan, Utf8SourceMap};
-    ///
-    /// let source = Utf8SourceMap::new("aéz");
-    /// let accented = SourceSpan::new(&source, 1, 3).unwrap();
-    /// let adjacent = SourceSpan::new(&source, 3, 4).unwrap();
-    /// let empty = SourceSpan::new(&source, 1, 1).unwrap();
-    /// assert!(!accented.overlaps(&adjacent));
-    /// assert!(!accented.overlaps(&empty));
-    /// ```
+    #[doc = include_str!("malarky-domain-docs/source-span-overlaps.md")]
     pub fn overlaps(&self, other: &Self) -> bool {
         self.same_source_map(other) && self.start < other.end && other.start < self.end
     }
-    /// Report whether this span fully contains another span.
-    ///
-    /// # Parameters
-    ///
-    /// - `other`: the span whose boundaries must lie within this span.
-    ///
-    /// # Returns
-    ///
-    /// `true` when both boundaries of `other` lie within this span. A span
-    /// contains itself, an empty span at either boundary, and every adjacent
-    /// internal boundary; it does not contain an empty span beyond its end.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use malarky_domain::{SourceSpan, Utf8SourceMap};
-    ///
-    /// let source = Utf8SourceMap::new("aéz");
-    /// let whole = SourceSpan::new(&source, 0, 4).unwrap();
-    /// let accented = SourceSpan::new(&source, 1, 3).unwrap();
-    /// let at_end = SourceSpan::new(&source, 4, 4).unwrap();
-    /// assert!(whole.contains(&accented));
-    /// assert!(whole.contains(&at_end));
-    /// ```
+    #[doc = include_str!("malarky-domain-docs/source-span-contains.md")]
     pub fn contains(&self, other: &Self) -> bool {
         self.same_source_map(other) && self.start <= other.start && other.end <= self.end
     }
@@ -157,7 +83,7 @@ pub struct MappedSegment {
     boundaries: Vec<SourceBoundary>,
 }
 impl MappedSegment {
-    /// Create a segment only when every semantic boundary has a safe mapping.
+    #[doc = include_str!("malarky-domain-docs/mapped-segment-new.md")]
     pub fn new(
         source_map: &Utf8SourceMap<'_>,
         semantic_text: String,
@@ -188,11 +114,11 @@ impl MappedSegment {
                 boundaries,
             })
     }
-    /// Return the searchable text represented by this segment.
+    #[doc = include_str!("malarky-domain-docs/mapped-segment-semantic-text.md")]
     pub fn semantic_text(&self) -> &str { &self.semantic_text }
-    /// Return the complete source extent represented by this segment.
+    #[doc = include_str!("malarky-domain-docs/mapped-segment-source.md")]
     pub fn source(&self) -> SourceSpan { self.source.clone() }
-    /// Return the complete monotonic semantic-to-source boundary map.
+    #[doc = include_str!("malarky-domain-docs/mapped-segment-boundaries.md")]
     pub fn boundaries(&self) -> &[SourceBoundary] { &self.boundaries }
 }
 /// An explicit join between adjacent mapped segments after projection.
@@ -210,7 +136,7 @@ impl PartialEq for CrossSegmentJoin {
 }
 impl Eq for CrossSegmentJoin {}
 impl CrossSegmentJoin {
-    /// Create an ordered join whose endpoints are safe UTF-8 boundaries.
+    #[doc = include_str!("malarky-domain-docs/cross-segment-join-new.md")]
     pub fn new(
         source_map: &Utf8SourceMap<'_>,
         left_source_boundary: usize,
@@ -225,7 +151,7 @@ impl CrossSegmentJoin {
             right_source_boundary,
         })
     }
-    /// Return the ordered source boundaries on either side of the join.
+    #[doc = include_str!("malarky-domain-docs/cross-segment-join-boundaries.md")]
     pub const fn source_boundaries(&self) -> (usize, usize) {
         (self.left_source_boundary, self.right_source_boundary)
     }
@@ -241,7 +167,7 @@ pub struct SemanticBlock {
     joins: Vec<CrossSegmentJoin>,
 }
 impl SemanticBlock {
-    /// Create a block only when its segments and joins share one source map.
+    #[doc = include_str!("malarky-domain-docs/semantic-block-new.md")]
     pub fn new(
         source_map: &Utf8SourceMap<'_>,
         source: SourceSpan,
@@ -273,11 +199,11 @@ impl SemanticBlock {
                 joins,
             })
     }
-    /// Return the complete source extent represented by this block.
+    #[doc = include_str!("malarky-domain-docs/semantic-block-source.md")]
     pub fn source(&self) -> SourceSpan { self.source.clone() }
-    /// Return the ordered semantic segments in this block.
+    #[doc = include_str!("malarky-domain-docs/semantic-block-segments.md")]
     pub fn segments(&self) -> &[MappedSegment] { &self.segments }
-    /// Return the joins between adjacent semantic segments.
+    #[doc = include_str!("malarky-domain-docs/semantic-block-joins.md")]
     pub fn joins(&self) -> &[CrossSegmentJoin] { &self.joins }
 }
 /// The maximum normalization applied while matching semantic text.
@@ -324,7 +250,7 @@ pub struct Annotation {
     payload: AnnotationPayload,
 }
 impl Annotation {
-    /// Validate that the payload shape matches the kind and lies within source.
+    #[doc = include_str!("malarky-domain-docs/annotation-new.md")]
     pub fn new(
         kind: AnnotationKind,
         source: SourceSpan,
@@ -355,11 +281,11 @@ impl Annotation {
             payload,
         })
     }
-    /// Return the validated annotation kind.
+    #[doc = include_str!("malarky-domain-docs/annotation-kind.md")]
     pub const fn kind(&self) -> AnnotationKind { self.kind }
-    /// Return the complete annotation source extent.
+    #[doc = include_str!("malarky-domain-docs/annotation-source.md")]
     pub fn source(&self) -> SourceSpan { self.source.clone() }
-    /// Return the kind-specific payload span or spans.
+    #[doc = include_str!("malarky-domain-docs/annotation-payload.md")]
     pub fn payload(&self) -> AnnotationPayload { self.payload.clone() }
 }
 /// A source replacement produced only after matching and validation succeed.
@@ -375,7 +301,7 @@ pub struct MutationPlan {
     edits: Vec<SourceEdit>,
 }
 impl MutationPlan {
-    /// Create a plan only when edits are in descending order and do not overlap.
+    #[doc = include_str!("malarky-domain-docs/mutation-plan-new.md")]
     pub fn new(selected: Vec<MatchCandidate>, edits: Vec<SourceEdit>) -> Option<Self> {
         let has_one_source_map = edits.first().is_none_or(|first| {
             edits
@@ -391,6 +317,6 @@ impl MutationPlan {
         (has_one_source_map && has_descending_disjoint_edits).then_some(Self { selected, edits })
     }
 
-    /// Return edits in the descending order required for application.
+    #[doc = include_str!("malarky-domain-docs/mutation-plan-edits.md")]
     pub fn edits(&self) -> &[SourceEdit] { &self.edits }
 }

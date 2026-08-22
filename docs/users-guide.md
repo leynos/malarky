@@ -3,6 +3,15 @@
 This guide explains how to use the generated Malarky project after rendering it
 from the template.
 
+
+## Malarky command status
+
+Malarky is currently in the design stage. The
+[normative CLI contract](design/malarky-cli.txt) describes the planned agent
+interface, but no Malarky command is runnable yet. Consult the
+[technical design](malarky-design.md) and [roadmap](roadmap.md) for the planned
+behaviour and delivery sequence.
+
 ## Generated Tooling
 
 Generated projects use Rust 2024, a pinned nightly toolchain, strict lint
