@@ -1,0 +1,10 @@
+error[E0624]: method `belongs_to` is private
+ --> tests/ui/domain_contract/fail/private_source_map_helper.rs:8:32
+  |
+8 |     let _belongs_to_map = span.belongs_to(&source_map);
+  |                                ^^^^^^^^^^ private method
+  |
+ ::: src/../docs/design/malarky-domain.rs
+  |
+  |     fn belongs_to(&self, source_map: &Utf8SourceMap<'_>) -> bool {
+  |     ------------------------------------------------------------ private method defined here

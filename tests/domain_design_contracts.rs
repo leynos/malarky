@@ -1,8 +1,5 @@
 //! Executable contracts for Malarky's normative source-mapped domain design.
 
-#[path = "../docs/design/malarky-domain.rs"]
-mod domain;
-
 use domain::{
     Annotation,
     AnnotationKind,
@@ -19,10 +16,14 @@ use domain::{
     SourceSpan,
     Utf8SourceMap,
 };
+use malarky::domain_contract as domain;
 use proptest::prelude::*;
 
 #[path = "domain_design_contracts/boundaries.rs"]
 mod boundaries;
+
+#[path = "domain_design_contracts/generated.rs"]
+mod generated;
 
 macro_rules! require {
     ($value:expr, $message:literal $(,)?) => {{
@@ -33,10 +34,12 @@ macro_rules! require {
     }};
 }
 
+/// Constructs a span when both offsets are valid source boundaries.
 fn source_span(source_map: &Utf8SourceMap<'_>, start: usize, end: usize) -> Option<SourceSpan> {
     SourceSpan::new(source_map, start, end)
 }
 
+/// Constructs an identity-mapped segment for a validated source range.
 fn identity_segment(
     source_map: &Utf8SourceMap<'_>,
     source: &str,
@@ -64,6 +67,7 @@ fn identity_segment(
     )
 }
 
+/// Rejects a span whose opaque map identity does not match the source map.
 #[test]
 fn source_spans_do_not_slice_foreign_source_maps() {
     let source = String::from("aé");
@@ -78,6 +82,7 @@ fn source_spans_do_not_slice_foreign_source_maps() {
     assert!(foreign_map.slice(&span).is_none());
 }
 
+/// Checks every UTF-8 boundary pair for construction and slice round-tripping.
 #[test]
 fn multibyte_boundaries_construct_and_slice_safely() {
     let source = "aé猫🦀z";
@@ -97,6 +102,7 @@ fn multibyte_boundaries_construct_and_slice_safely() {
     }
 }
 
+/// Requires semantic blocks to preserve source ordering and exact joins.
 #[test]
 fn semantic_blocks_require_ordered_segments_and_adjacent_joins() {
     let source = "alpha beta";
@@ -165,6 +171,7 @@ fn semantic_blocks_require_ordered_segments_and_adjacent_joins() {
     );
 }
 
+/// Asserts accepted annotation shapes preserve their exact payloads.
 fn assert_annotation_payloads(whole: &SourceSpan, old: &SourceSpan, new: &SourceSpan) {
     for kind in [
         AnnotationKind::Deletion,
@@ -180,8 +187,17 @@ fn assert_annotation_payloads(whole: &SourceSpan, old: &SourceSpan, new: &Source
             ),
             "single payload should match its annotation kind",
         );
-        assert_eq!(annotation.kind(), kind);
-        assert_eq!(annotation.source(), (*whole).clone());
+        assert_eq!(annotation.kind(), kind, "annotation kind must be retained");
+        assert_eq!(
+            annotation.source(),
+            (*whole).clone(),
+            "annotation source must be retained"
+        );
+        assert_eq!(
+            annotation.payload(),
+            AnnotationPayload::Single((*old).clone()),
+            "annotation payload must be retained"
+        );
     }
     let replacement = require!(
         Annotation::new(
@@ -199,13 +215,22 @@ fn assert_annotation_payloads(whole: &SourceSpan, old: &SourceSpan, new: &Source
         AnnotationPayload::Replacement {
             old: (*old).clone(),
             new: (*new).clone(),
-        }
+        },
+        "replacement payload must be retained"
     );
 }
 
+/// Asserts a valid plan retains its selected candidates and source edit.
 fn assert_valid_mutation_plan(whole: &SourceSpan, old: &SourceSpan, new: SourceSpan) {
-    assert_eq!(MatchingPolicy::default(), MatchingPolicy::Whitespace);
-    assert!(matches!(MatchingPolicy::Exact, MatchingPolicy::Exact));
+    assert_eq!(
+        MatchingPolicy::default(),
+        MatchingPolicy::Whitespace,
+        "whitespace must be default policy"
+    );
+    assert!(
+        matches!(MatchingPolicy::Exact, MatchingPolicy::Exact),
+        "exact policy must remain constructible"
+    );
     let candidates = vec![
         MatchCandidate {
             block: (*whole).clone(),
@@ -220,20 +245,23 @@ fn assert_valid_mutation_plan(whole: &SourceSpan, old: &SourceSpan, new: SourceS
             excerpt: String::from("beta"),
         },
     ];
+    let expected_candidates = candidates.clone();
+    let expected_edits = vec![SourceEdit {
+        source: new,
+        replacement: String::from("gamma"),
+    }];
     let plan = require!(
-        MutationPlan::new(
-            candidates,
-            vec![SourceEdit {
-                source: new,
-                replacement: String::from("gamma"),
-            }],
-        ),
+        MutationPlan::new(candidates, expected_edits.clone(),),
         "a single edit should form a valid plan",
     );
-    assert_eq!(plan.selected.len(), 2);
-    assert_eq!(plan.edits().len(), 1);
+    assert_eq!(
+        plan.selected, expected_candidates,
+        "plan must retain candidates"
+    );
+    assert_eq!(plan.edits(), expected_edits, "plan must retain edits");
 }
 
+/// Verifies accepted annotations and plans retain their complete state.
 #[test]
 fn annotations_and_valid_mutation_plans_preserve_their_contracts() {
     let source = "alpha beta";
@@ -279,12 +307,16 @@ proptest! {
             .collect::<Vec<_>>();
 
         prop_assert!(foreign_map.slice(&span).is_none());
-        prop_assert!(MappedSegment::new(
+        let segment = MappedSegment::new(
             &source_map,
             source.clone(),
             span.clone(),
             valid_boundaries.clone(),
-        ).is_some());
+        )
+        .ok_or_else(|| TestCaseError::fail("identity boundaries should construct a segment"))?;
+        prop_assert_eq!(segment.semantic_text(), source.as_str());
+        prop_assert_eq!(segment.source(), span.clone());
+        prop_assert_eq!(segment.boundaries(), valid_boundaries.as_slice());
 
         let mut incomplete_boundaries = valid_boundaries.clone();
         incomplete_boundaries.pop();

@@ -17,7 +17,7 @@ None.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{SourceSpan, Utf8SourceMap};
+use malarky::domain_contract::{SourceSpan, Utf8SourceMap};
 let map = Utf8SourceMap::new("abc");
 assert_eq!(SourceSpan::new(&map, 1, 2).unwrap().range(), 1..2);
 ```

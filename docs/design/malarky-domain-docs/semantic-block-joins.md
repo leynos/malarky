@@ -17,7 +17,7 @@ None.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{CrossSegmentJoin, MappedSegment, SemanticBlock, SourceBoundary, SourceSpan, Utf8SourceMap};
+use malarky::domain_contract::{CrossSegmentJoin, MappedSegment, SemanticBlock, SourceBoundary, SourceSpan, Utf8SourceMap};
 let map = Utf8SourceMap::new("ab");
 let block_span = SourceSpan::new(&map, 0, 2).unwrap();
 let left_span = SourceSpan::new(&map, 0, 1).unwrap();

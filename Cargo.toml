@@ -13,7 +13,11 @@ categories = []
 [dependencies]
 
 [dev-dependencies]
+camino = "1.2.5"
+cap-std = { version = "4.0.2", features = ["fs_utf8"] }
 proptest = "1.10.0"
+rstest = "0.26.1"
+trybuild = "1.0.120"
 
 # The package.metadata.binstall pkg-url intentionally mixes Jinja2 values
 # rendered at project generation with single-brace cargo-binstall variables
@@ -104,8 +108,3 @@ bare_urls                           = "deny"
 invalid_html_tags                   = "deny"
 invalid_codeblock_attributes        = "deny"
 unescaped_backticks                 = "deny"
-
-[dev-dependencies]
-camino = "1.2.5"
-cap-std = { version = "4.0.2", features = ["fs_utf8"] }
-rstest = "0.26.1"

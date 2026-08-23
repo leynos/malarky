@@ -17,7 +17,7 @@ None.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{MutationPlan, SourceEdit, SourceSpan, Utf8SourceMap};
+use malarky::domain_contract::{MutationPlan, SourceEdit, SourceSpan, Utf8SourceMap};
 let map = Utf8SourceMap::new("abc");
 let later = SourceSpan::new(&map, 2, 3).unwrap();
 let earlier = SourceSpan::new(&map, 0, 1).unwrap();

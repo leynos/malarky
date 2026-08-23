@@ -17,7 +17,7 @@ None; spans from different maps are not contained.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{SourceSpan, Utf8SourceMap};
+use malarky::domain_contract::{SourceSpan, Utf8SourceMap};
 let map = Utf8SourceMap::new("abc");
 let whole = SourceSpan::new(&map, 0, 3).unwrap();
 assert!(whole.contains(&SourceSpan::new(&map, 1, 2).unwrap()));

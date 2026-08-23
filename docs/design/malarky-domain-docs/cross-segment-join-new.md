@@ -19,7 +19,7 @@ None; reversed or invalid boundaries are represented as `None`.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{CrossSegmentJoin, Utf8SourceMap};
+use malarky::domain_contract::{CrossSegmentJoin, Utf8SourceMap};
 let map = Utf8SourceMap::new("aé");
 assert!(CrossSegmentJoin::new(&map, 1, 3).is_some());
 assert!(CrossSegmentJoin::new(&map, 2, 3).is_none());

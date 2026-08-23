@@ -17,7 +17,7 @@ None.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{CrossSegmentJoin, Utf8SourceMap};
+use malarky::domain_contract::{CrossSegmentJoin, Utf8SourceMap};
 let map = Utf8SourceMap::new("a");
 let join = CrossSegmentJoin::new(&map, 0, 1).unwrap();
 assert!(join.source_boundaries().0 <= join.source_boundaries().1);

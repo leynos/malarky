@@ -18,6 +18,6 @@ None; ordering, overlap, or map-identity failures are represented as `None`.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::MutationPlan;
+use malarky::domain_contract::MutationPlan;
 assert!(MutationPlan::new(vec![], vec![]).is_some());
 ```

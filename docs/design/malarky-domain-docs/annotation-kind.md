@@ -17,7 +17,7 @@ None.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{Annotation, AnnotationKind, AnnotationPayload, SourceSpan, Utf8SourceMap};
+use malarky::domain_contract::{Annotation, AnnotationKind, AnnotationPayload, SourceSpan, Utf8SourceMap};
 let map = Utf8SourceMap::new("text");
 let source = SourceSpan::new(&map, 0, 4).unwrap();
 let annotation = Annotation::new(
@@ -25,5 +25,5 @@ let annotation = Annotation::new(
     source.clone(),
     AnnotationPayload::Single(source),
 ).unwrap();
-assert_eq!(annotation.kind(), malarky_domain::AnnotationKind::Comment);
+assert_eq!(annotation.kind(), malarky::domain_contract::AnnotationKind::Comment);
 ```

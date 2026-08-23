@@ -18,7 +18,7 @@ None; spans from different maps do not overlap.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{SourceSpan, Utf8SourceMap};
+use malarky::domain_contract::{SourceSpan, Utf8SourceMap};
 let map = Utf8SourceMap::new("abc");
 let left = SourceSpan::new(&map, 0, 1).unwrap();
 let right = SourceSpan::new(&map, 1, 2).unwrap();

@@ -22,7 +22,7 @@ None; identity, ordering, containment, or join failures are represented as
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{SemanticBlock, SourceSpan, Utf8SourceMap};
+use malarky::domain_contract::{SemanticBlock, SourceSpan, Utf8SourceMap};
 let map = Utf8SourceMap::new("text");
 let source = SourceSpan::new(&map, 0, 4).unwrap();
 assert!(SemanticBlock::new(&map, source, vec![], vec![]).is_some());

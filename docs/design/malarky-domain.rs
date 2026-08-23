@@ -7,11 +7,14 @@ use std::rc::Rc;
 /// The UTF-8 source against which domain offsets are validated.
 #[derive(Clone, Debug)]
 pub struct Utf8SourceMap<'source> {
+    /// Original UTF-8 text whose byte boundaries this map validates.
     source: &'source str,
+    /// Opaque identity shared with every span from this exact source map.
     identity: Rc<SourceMapIdentity>,
 }
 impl<'source> Utf8SourceMap<'source> {
     #[doc = include_str!("malarky-domain-docs/utf8-source-map-new.md")]
+    #[must_use]
     pub fn new(source: &'source str) -> Self {
         Self {
             source,
@@ -19,6 +22,7 @@ impl<'source> Utf8SourceMap<'source> {
         }
     }
     #[doc = include_str!("malarky-domain-docs/utf8-source-map-slice.md")]
+    #[must_use]
     pub fn slice(&self, span: &SourceSpan) -> Option<&'source str> {
         span.belongs_to(self)
             .then(|| self.source.get(span.range()))?
@@ -30,8 +34,11 @@ struct SourceMapIdentity;
 /// A half-open byte range in the original UTF-8 source.
 #[derive(Clone, Debug)]
 pub struct SourceSpan {
+    /// Opaque identity of the source map that validated this span.
     source_map: Rc<SourceMapIdentity>,
+    /// Inclusive lower bound of the half-open byte range.
     start: usize,
+    /// Exclusive upper bound of the half-open byte range.
     end: usize,
 }
 impl PartialEq for SourceSpan {
@@ -42,6 +49,7 @@ impl PartialEq for SourceSpan {
 impl Eq for SourceSpan {}
 impl SourceSpan {
     #[doc = include_str!("malarky-domain-docs/source-span-new.md")]
+    #[must_use]
     pub fn new(source_map: &Utf8SourceMap<'_>, start: usize, end: usize) -> Option<Self> {
         (start <= end
             && source_map.source.is_char_boundary(start)
@@ -53,18 +61,23 @@ impl SourceSpan {
         })
     }
     #[doc = include_str!("malarky-domain-docs/source-span-range.md")]
+    #[must_use]
     pub const fn range(&self) -> std::ops::Range<usize> { self.start..self.end }
     #[doc = include_str!("malarky-domain-docs/source-span-overlaps.md")]
+    #[must_use]
     pub fn overlaps(&self, other: &Self) -> bool {
         self.same_source_map(other) && self.start < other.end && other.start < self.end
     }
     #[doc = include_str!("malarky-domain-docs/source-span-contains.md")]
+    #[must_use]
     pub fn contains(&self, other: &Self) -> bool {
         self.same_source_map(other) && self.start <= other.start && other.end <= self.end
     }
+    /// Reports whether this span was created by `source_map`.
     fn belongs_to(&self, source_map: &Utf8SourceMap<'_>) -> bool {
         Rc::ptr_eq(&self.source_map, &source_map.identity)
     }
+    /// Reports whether both spans retain the same source-map identity.
     fn same_source_map(&self, other: &Self) -> bool {
         Rc::ptr_eq(&self.source_map, &other.source_map)
     }
@@ -72,18 +85,24 @@ impl SourceSpan {
 /// One semantic-text boundary and its corresponding source boundary.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SourceBoundary {
+    /// Byte offset in the semantic-text value.
     pub semantic_offset: usize,
+    /// Corresponding UTF-8 byte offset in the original source.
     pub source_offset: usize,
 }
 /// A contiguous semantic-text segment with a map for every text boundary.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MappedSegment {
+    /// Searchable net-result text emitted by this segment.
     semantic_text: String,
+    /// Contiguous source interval that produced the semantic text.
     source: SourceSpan,
+    /// Source mapping for every UTF-8 boundary in the semantic text.
     boundaries: Vec<SourceBoundary>,
 }
 impl MappedSegment {
     #[doc = include_str!("malarky-domain-docs/mapped-segment-new.md")]
+    #[must_use]
     pub fn new(
         source_map: &Utf8SourceMap<'_>,
         semantic_text: String,
@@ -115,17 +134,23 @@ impl MappedSegment {
             })
     }
     #[doc = include_str!("malarky-domain-docs/mapped-segment-semantic-text.md")]
+    #[must_use]
     pub fn semantic_text(&self) -> &str { &self.semantic_text }
     #[doc = include_str!("malarky-domain-docs/mapped-segment-source.md")]
+    #[must_use]
     pub fn source(&self) -> SourceSpan { self.source.clone() }
     #[doc = include_str!("malarky-domain-docs/mapped-segment-boundaries.md")]
+    #[must_use]
     pub fn boundaries(&self) -> &[SourceBoundary] { &self.boundaries }
 }
 /// An explicit join between adjacent mapped segments after projection.
 #[derive(Clone, Debug)]
 pub struct CrossSegmentJoin {
+    /// Opaque identity of the source map that validated both endpoints.
     source_map: Rc<SourceMapIdentity>,
+    /// Source boundary at the end of the preceding segment.
     left_source_boundary: usize,
+    /// Source boundary at the start of the following segment.
     right_source_boundary: usize,
 }
 impl PartialEq for CrossSegmentJoin {
@@ -137,6 +162,7 @@ impl PartialEq for CrossSegmentJoin {
 impl Eq for CrossSegmentJoin {}
 impl CrossSegmentJoin {
     #[doc = include_str!("malarky-domain-docs/cross-segment-join-new.md")]
+    #[must_use]
     pub fn new(
         source_map: &Utf8SourceMap<'_>,
         left_source_boundary: usize,
@@ -152,9 +178,11 @@ impl CrossSegmentJoin {
         })
     }
     #[doc = include_str!("malarky-domain-docs/cross-segment-join-boundaries.md")]
+    #[must_use]
     pub const fn source_boundaries(&self) -> (usize, usize) {
         (self.left_source_boundary, self.right_source_boundary)
     }
+    /// Reports whether this join was created by `source_map`.
     fn belongs_to(&self, source_map: &Utf8SourceMap<'_>) -> bool {
         Rc::ptr_eq(&self.source_map, &source_map.identity)
     }
@@ -162,12 +190,16 @@ impl CrossSegmentJoin {
 /// Searchable text contained by one Markdown block.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SemanticBlock {
+    /// Source extent of the single Markdown block.
     source: SourceSpan,
+    /// Ordered source-mapped semantic segments in this block.
     segments: Vec<MappedSegment>,
+    /// Exact source joins between adjacent semantic segments.
     joins: Vec<CrossSegmentJoin>,
 }
 impl SemanticBlock {
     #[doc = include_str!("malarky-domain-docs/semantic-block-new.md")]
+    #[must_use]
     pub fn new(
         source_map: &Utf8SourceMap<'_>,
         source: SourceSpan,
@@ -200,57 +232,84 @@ impl SemanticBlock {
             })
     }
     #[doc = include_str!("malarky-domain-docs/semantic-block-source.md")]
+    #[must_use]
     pub fn source(&self) -> SourceSpan { self.source.clone() }
     #[doc = include_str!("malarky-domain-docs/semantic-block-segments.md")]
+    #[must_use]
     pub fn segments(&self) -> &[MappedSegment] { &self.segments }
     #[doc = include_str!("malarky-domain-docs/semantic-block-joins.md")]
+    #[must_use]
     pub fn joins(&self) -> &[CrossSegmentJoin] { &self.joins }
 }
 /// The maximum normalization applied while matching semantic text.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum MatchingPolicy {
+    /// Match semantic text byte-for-byte.
     Exact,
+    /// Match only after documented whitespace normalization.
     #[default]
     Whitespace,
 }
 /// The tier that produced a candidate.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MatchTier {
+    /// Candidate came from an exact semantic-text match.
     Exact,
+    /// Candidate came from a whitespace-normalized match.
     Whitespace,
 }
 /// A deterministic candidate exposed to selection and mutation planning.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MatchCandidate {
+    /// Semantic block that contains the candidate.
     pub block: SourceSpan,
+    /// Exact source range selected by the candidate.
     pub target: SourceSpan,
+    /// Matching tier that produced this candidate.
     pub tier: MatchTier,
+    /// Human-readable excerpt reported to the caller.
     pub excerpt: String,
 }
 /// `CriticMarkup` annotation kinds recognized by the overlay parser.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AnnotationKind {
+    /// A deletion annotation whose payload is absent from the net result.
     Deletion,
+    /// An insertion annotation whose payload appears in the net result.
     Insertion,
+    /// A replacement annotation with distinct old and new payloads.
     Replacement,
+    /// A highlight annotation whose payload remains in the net result.
     Highlight,
+    /// A comment annotation whose payload is not semantic text.
     Comment,
 }
 /// Payload spans whose shape is specific to the annotation kind.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AnnotationPayload {
+    /// Payload for a non-replacement annotation.
     Single(SourceSpan),
-    Replacement { old: SourceSpan, new: SourceSpan },
+    /// Ordered old and new payloads for a replacement annotation.
+    Replacement {
+        /// Original payload removed by the replacement.
+        old: SourceSpan,
+        /// Net-result payload introduced by the replacement.
+        new: SourceSpan,
+    },
 }
 /// An existing annotation and its complete source extent.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Annotation {
+    /// `CriticMarkup` form represented by this annotation.
     kind: AnnotationKind,
+    /// Complete source extent, including delimiters and payloads.
     source: SourceSpan,
+    /// Kind-specific payload spans inside `source`.
     payload: AnnotationPayload,
 }
 impl Annotation {
     #[doc = include_str!("malarky-domain-docs/annotation-new.md")]
+    #[must_use]
     pub fn new(
         kind: AnnotationKind,
         source: SourceSpan,
@@ -282,26 +341,34 @@ impl Annotation {
         })
     }
     #[doc = include_str!("malarky-domain-docs/annotation-kind.md")]
+    #[must_use]
     pub const fn kind(&self) -> AnnotationKind { self.kind }
     #[doc = include_str!("malarky-domain-docs/annotation-source.md")]
+    #[must_use]
     pub fn source(&self) -> SourceSpan { self.source.clone() }
     #[doc = include_str!("malarky-domain-docs/annotation-payload.md")]
+    #[must_use]
     pub fn payload(&self) -> AnnotationPayload { self.payload.clone() }
 }
 /// A source replacement produced only after matching and validation succeed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SourceEdit {
+    /// Source range to replace.
     pub source: SourceSpan,
+    /// Replacement bytes for `source`.
     pub replacement: String,
 }
 /// A complete mutation plan with descending, disjoint source edits.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MutationPlan {
+    /// Candidates selected for this mutation.
     pub selected: Vec<MatchCandidate>,
+    /// Descending, disjoint source replacements ready for application.
     edits: Vec<SourceEdit>,
 }
 impl MutationPlan {
     #[doc = include_str!("malarky-domain-docs/mutation-plan-new.md")]
+    #[must_use]
     pub fn new(selected: Vec<MatchCandidate>, edits: Vec<SourceEdit>) -> Option<Self> {
         let has_one_source_map = edits.first().is_none_or(|first| {
             edits
@@ -318,5 +385,6 @@ impl MutationPlan {
     }
 
     #[doc = include_str!("malarky-domain-docs/mutation-plan-edits.md")]
+    #[must_use]
     pub fn edits(&self) -> &[SourceEdit] { &self.edits }
 }

@@ -17,7 +17,7 @@ None.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{MappedSegment, SemanticBlock, SourceBoundary, SourceSpan, Utf8SourceMap};
+use malarky::domain_contract::{MappedSegment, SemanticBlock, SourceBoundary, SourceSpan, Utf8SourceMap};
 let map = Utf8SourceMap::new("a");
 let span = SourceSpan::new(&map, 0, 1).unwrap();
 let segment = MappedSegment::new(&map, "a".into(), span.clone(), vec![

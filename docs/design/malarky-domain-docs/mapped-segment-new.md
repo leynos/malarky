@@ -20,7 +20,7 @@ None; invalid maps or foreign spans are represented as `None`.
 ## Examples
 
 ```rust,no_run
-use malarky_domain::{MappedSegment, SourceBoundary, SourceSpan, Utf8SourceMap};
+use malarky::domain_contract::{MappedSegment, SourceBoundary, SourceSpan, Utf8SourceMap};
 let map = Utf8SourceMap::new("é");
 let source = SourceSpan::new(&map, 0, 2).unwrap();
 assert!(MappedSegment::new(&map, "é".into(), source, vec![
