@@ -1,0 +1,5 @@
+error[E0616]: field `start` of struct `SourceSpan` is private
+ --> tests/ui/domain_contract/fail/private_source_span_field.rs:8:23
+  |
+8 |     let _start = span.start;
+  |                       ^^^^^ private field

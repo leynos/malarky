@@ -1,0 +1,9 @@
+# Project configuration discovered as .malarky.toml. ADR 003 defines
+# command-line, environment, project-file, and built-in precedence.
+
+# The highest matching tier. "whitespace" tries exact semantic text first,
+# then collapses Unicode whitespace runs. "exact" disables the second tier.
+matching = "whitespace"
+
+# Number of unchanged lines on either side of a successful unified diff.
+diff_context = 3

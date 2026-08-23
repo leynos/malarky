@@ -1,0 +1,67 @@
+malarky — add and inspect CriticMarkup without rewriting Markdown
+
+Usage: malarky <COMMAND>
+
+Commands:
+  delete     Mark existing text as deleted, or undo a matching insertion
+  insert     Mark text as inserted at a semantic-text boundary, or undo a deletion
+  replace    Mark existing text as replaced, or undo the inverse replacement
+  highlight  Highlight existing text, or remove a highlight with --delete
+  comment    Comment on existing text, update its comment, or remove it with --delete
+  list       List CriticMarkup annotations without changing the file
+  validate   Validate Markdown and CriticMarkup without changing the file
+
+Mutation command options:
+  --match <INDEX>       Apply an indexed candidate reported by a previous run
+  --selection <TOKEN>   Bind --match to that report's document and candidate set
+  --all                 Apply every non-overlapping candidate
+  --matching <POLICY>   Maximum matching tier: exact or whitespace
+  --config-path <PATH>  Load project configuration from PATH
+
+delete:
+  malarky delete [OPTIONS] <FILE> <BEFORE> <TEXT> <AFTER>
+
+insert:
+  malarky insert [OPTIONS] <FILE> <BEFORE> <TEXT> <AFTER>
+
+replace:
+  malarky replace [OPTIONS] <FILE> <BEFORE> <OLD> <NEW> <AFTER>
+
+highlight:
+  malarky highlight [OPTIONS] [--delete] <FILE> <TEXT>
+
+comment:
+  malarky comment [OPTIONS] [--delete] <FILE> <TEXT> [COMMENT]
+
+list:
+  malarky list [--config-path <PATH>] <FILE>
+
+validate:
+  malarky validate [--config-path <PATH>] <FILE>
+
+Selection rules:
+  A sole candidate is applied immediately. Multiple candidates make no change
+  and are reported with stable one-based indexes and an opaque selection token.
+  --match requires that token through --selection and rejects a changed document
+  or candidate set, even when the index remains in range. --match and --all are
+  mutually exclusive, and --selection is invalid without --match. --all fails
+  without changing the file if selected source spans overlap. This contract is
+  governed by ADR 003.
+
+Output:
+  A successful mutation replaces the selected <FILE> in place, then writes a
+  localized unified diff with three context lines to standard output. The edit
+  is persisted and is not a preview. The diff is generated before replacement
+  and emitted only after replacement succeeds. list writes tab-separated
+  annotation records to standard output. validate writes "valid\t<FILE>" to
+  standard output on success. Diagnostics and errors use standard error.
+
+Exit status:
+  0  Success
+  2  Invalid command line or configuration
+  3  No match
+  4  Multiple matches require --match or --all
+  5  Invalid CriticMarkup mutation or annotation intersection
+  6  Mutation or inspection parse failure before mutation or inspection
+  7  File read, temporary-write, or replacement failure
+  8  validate found invalid UTF-8, CriticMarkup, Markdown, or source-map results
