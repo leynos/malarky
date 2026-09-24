@@ -17,6 +17,7 @@ camino = "1.2.5"
 cap-std = { version = "4.0.2", features = ["fs_utf8"] }
 proptest = "1.10.0"
 rstest = "0.26.1"
+toml = "1.1.4"
 trybuild = "1.0.120"
 
 # The package.metadata.binstall pkg-url intentionally mixes Jinja2 values
