@@ -267,6 +267,7 @@ dependencies = [
  "cap-std",
  "proptest",
  "rstest",
+ "toml",
  "trybuild",
 ]
 
