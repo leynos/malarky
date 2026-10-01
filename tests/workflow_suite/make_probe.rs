@@ -65,13 +65,28 @@ impl Skip {
     }
 }
 
-/// Runs `make --version` and returns its standard output. The only fallible
-/// probe: it starts the process and does nothing else.
+/// Reads what `make --version` printed, from the process's exit status and
+/// standard output. A failed run is an error, so the tests skip as `Absent`
+/// instead of reading whatever a broken `make` printed.
+///
+/// # Errors
+///
+/// Returns an error where `make --version` did not exit successfully.
+fn version_from(succeeded: bool, stdout: &[u8]) -> std::io::Result<String> {
+    if succeeded {
+        Ok(String::from_utf8_lossy(stdout).into_owned())
+    } else {
+        Err(std::io::Error::other("make --version failed"))
+    }
+}
+
+/// Runs `make --version` and returns its standard output. The only process
+/// call: it starts `make` and hands the outcome to [`version_from`].
 fn make_version() -> std::io::Result<String> {
     let output = std::process::Command::new("make")
         .arg("--version")
         .output()?;
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    version_from(output.status.success(), &output.stdout)
 }
 
 /// Decides from the `make --version` result whether GNU make is available.
@@ -165,6 +180,24 @@ fn the_boundary_surfaces_a_failing_writer_only_when_it_must_report() {
         !stop_unless_gnu(Ok("GNU Make 4.4.1\n".to_owned()), &mut Refusing)
             .expect("GNU make writes nothing, so a refusing writer is never reached")
     );
+}
+
+/// A failed `make --version` is an error whatever it printed, and a
+/// successful one is its output, so a broken make skips as `Absent`.
+#[rstest]
+#[case::ok(true, b"GNU Make 4.4.1\n", Some("GNU Make 4.4.1\n"))]
+#[case::failed_but_gnu_looking(false, b"GNU Make 4.4.1\n", None)]
+#[case::failed_and_silent(false, b"", None)]
+fn a_failed_version_probe_is_an_error(
+    #[case] succeeded: bool,
+    #[case] stdout: &[u8],
+    #[case] expected: Option<&str>,
+) {
+    assert_eq!(version_from(succeeded, stdout).ok().as_deref(), expected);
+    if !succeeded {
+        let outcome = require_gnu_make(version_from(succeeded, stdout));
+        assert_eq!(outcome, Err(Skip::Absent));
+    }
 }
 
 /// Each way `make --version` can answer is either GNU make or a named skip.
