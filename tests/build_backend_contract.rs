@@ -45,22 +45,58 @@ fn without_comment(line: &str) -> &str {
     line.trim()
 }
 
-/// Returns the toolchain override (`+stable`, `+nightly-2026-05-28`) a command
-/// line gives Cargo or `cross` as its first argument, without the `+`.
+/// Splits a command line at `&&`, `||` and `;`, outside quotes, so each command is read alone: an
+/// `echo` that names a toolchain and the build that follows it are two commands.
+fn shell_commands(line: &str) -> Vec<String> {
+    let mut commands = Vec::new();
+    let mut current = String::new();
+    let mut quote: Option<char> = None;
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (quote, c) {
+            (Some(open), _) => {
+                current.push(c);
+                if c == open {
+                    quote = None;
+                }
+            }
+            (None, '"' | '\'') => {
+                current.push(c);
+                quote = Some(c);
+            }
+            (None, ';') => commands.push(std::mem::take(&mut current)),
+            (None, '&' | '|') if chars.peek() == Some(&c) => {
+                chars.next();
+                commands.push(std::mem::take(&mut current));
+            }
+            _ => current.push(c),
+        }
+    }
+    commands.push(current);
+    commands
+}
+
+/// Returns whether a word precedes the program in a command: a YAML list marker or `run:` key, a
+/// block indicator, `sudo`, or an environment assignment.
+fn leads_the_program(word: &str) -> bool {
+    matches!(word, "-" | "run:" | "|" | ">" | ">-" | "sudo") || word.contains('=')
+}
+
+/// Returns the toolchain override (`+stable`, `+nightly-2026-05-28`) one command gives Cargo or
+/// `cross` as its first argument, without the `+`.
 ///
-/// Only that shape counts: `+stable` in an `echo`, a URL or a comment is not a
-/// build, and reading it as one would report a key the release never reads.
-fn cargo_override(line: &str) -> Option<&str> {
-    let words: Vec<&str> = line.split_whitespace().collect();
-    words.windows(2).find_map(|pair| {
-        let [program, first_argument] = pair else {
-            return None;
-        };
-        let name = program.rsplit('/').next().unwrap_or_default();
-        matches!(name, "cargo" | "cross")
-            .then(|| first_argument.strip_prefix('+'))
-            .flatten()
-    })
+/// Only that shape counts: `+stable` in an `echo`, a URL or a comment is not a build, and the
+/// program must be the command itself, not an argument of another command, or reading it would
+/// report a key the release never reads.
+fn command_override(command: &str) -> Option<String> {
+    let mut words = command
+        .split_whitespace()
+        .skip_while(|word| leads_the_program(word));
+    let name = words.next()?.rsplit('/').next().unwrap_or_default();
+    if !matches!(name, "cargo" | "cross") {
+        return None;
+    }
+    words.next()?.strip_prefix('+').map(str::to_owned)
 }
 
 /// Returns whether the workflow builds on the stable toolchain.
@@ -69,12 +105,15 @@ fn cargo_override(line: &str) -> Option<&str> {
 /// one, because that is the toolchain Cargo runs; only a workflow whose commands
 /// name none falls back to the `toolchain` a setup action installs.
 fn builds_on_stable(workflow: &str) -> bool {
-    let overrides: Vec<&str> = code_lines(workflow).filter_map(cargo_override).collect();
+    let overrides: Vec<String> = code_lines(workflow)
+        .flat_map(shell_commands)
+        .filter_map(|command| command_override(&command))
+        .collect();
     if overrides.is_empty() {
         let squeezed = |line: &str| line.replace([' ', '\t', '"', '\''], "");
         return code_lines(workflow).any(|line| squeezed(line) == "toolchain:stable");
     }
-    overrides.contains(&"stable")
+    overrides.iter().any(|name| name == "stable")
 }
 
 /// Splits a configuration line into its top-level entries, dropping spaces and
@@ -83,12 +122,19 @@ fn builds_on_stable(workflow: &str) -> bool {
 fn entries(line: &str) -> Vec<String> {
     let mut found = vec![String::new()];
     let mut quote: Option<char> = None;
-    for c in line.chars() {
+    let mut chars = line.chars();
+    while let Some(c) = chars.next() {
         match (quote, c) {
+            // A backslash in a basic string escapes the next character, so `\"` does not end it.
+            (Some('"'), '\\') => {
+                if let (Some(current), Some(escaped)) = (found.last_mut(), chars.next()) {
+                    current.push(escaped);
+                }
+            }
             (None, '"' | '\'') => quote = Some(c),
             (Some(open), _) if c == open => quote = None,
             (None, '{' | ',') => found.push(String::new()),
-            (None, ' ') => {}
+            (None, ' ' | '\t') => {}
             _ => {
                 if let Some(current) = found.last_mut() {
                     current.push(c);
@@ -164,6 +210,15 @@ const STABLE_BY_PATH: &str = "steps:\n  - run: /root/.cargo/bin/cargo +stable bu
 /// A release workflow that mentions stable only in a comment.
 const STABLE_IN_A_COMMENT: &str =
     "steps:\n  # Was: cross +stable build --release\n  - run: cross build --release\n";
+/// A release workflow whose `echo` names a nightly override before the stable build.
+const ECHOED_OVERRIDE_BEFORE_STABLE: &str =
+    "steps:\n  - run: echo cross +nightly check && cross +stable build --release\n";
+/// A release workflow with two builds, the second on stable.
+const TWO_BUILDS_THE_LAST_STABLE: &str =
+    "steps:\n  - run: cargo +nightly check; cross +stable build --release\n";
+/// A release workflow whose stable build follows an environment assignment.
+const STABLE_WITH_ENVIRONMENT: &str =
+    "steps:\n  - run: CARGO_TERM_COLOR=always cross +stable build --release\n";
 /// The configuration shape a Cranelift default takes.
 const CRANELIFT: &str =
     "[unstable]\ncodegen-backend = true\n\n[profile.dev]\ncodegen-backend = \"cranelift\"\n";
@@ -237,6 +292,34 @@ const LINKER_ONLY: &str = concat!(
 #[case::stable_named_only_in_an_echo(CRANELIFT, STABLE_IN_AN_ECHO, 0)]
 #[case::cranelift_with_nightly_release(CRANELIFT, NIGHTLY_RELEASE, 0)]
 #[case::stable_named_only_in_a_comment(CRANELIFT, STABLE_IN_A_COMMENT, 0)]
+#[case::an_echoed_override_before_the_stable_build(CRANELIFT, ECHOED_OVERRIDE_BEFORE_STABLE, 2)]
+#[case::an_override_on_the_second_of_two_commands(CRANELIFT, TWO_BUILDS_THE_LAST_STABLE, 2)]
+#[case::an_escaped_quote_inside_a_value(
+    "[env]\nHINT = \"a\\\", codegen-backend=cranelift\"\n",
+    STABLE_RELEASE,
+    0
+)]
+#[case::a_key_after_an_escaped_quote_and_a_comma(
+    "profile = { hint = \"a\\\" b\", codegen-backend = \"cranelift\" }\n",
+    STABLE_RELEASE,
+    1
+)]
+#[case::string_value_with_a_comma_directly_before_the_key(
+    "[env]\nHINT = \"opt-level=1,codegen-backend=cranelift\"\n",
+    STABLE_RELEASE,
+    0
+)]
+#[case::comment_naming_the_key_after_a_comma(
+    "# a note, codegen-backend = \"cranelift\" would break stable\n[profile.dev]\nopt-level = 1\n",
+    STABLE_RELEASE,
+    0
+)]
+#[case::an_environment_assignment_before_the_program(CRANELIFT, STABLE_WITH_ENVIRONMENT, 2)]
+#[case::tabs_around_the_equals_sign(
+    "[profile.dev]\ncodegen-backend\t=\t\"cranelift\"\n",
+    STABLE_RELEASE,
+    1
+)]
 fn a_backend_key_is_refused_only_beside_a_stable_release(
     #[case] config: &str,
     #[case] release: &str,
