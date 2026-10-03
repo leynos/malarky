@@ -77,10 +77,11 @@ compact and omits build output such as `target/`.
   behaviour.
 - `tests/stub.rs`: Keeps the generated test directory valid until real tests
   replace it.
-- `tools/dev-fast/config.toml`: Opt-in Cargo configuration fragment that
-  applies the Cranelift backend and mold linker to accelerate local
-  `make dev-build` and `make dev-test` runs; passed explicitly with
-  `cargo --config`, never merged into `.cargo/config.toml`.
+- `tools/dev-fast/config.toml`: Cargo configuration fragment that selects the
+  Cranelift codegen backend for the standard make targets and `make dev-build`/
+  `make dev-test`. Passed explicitly with `--config` rather than placed under
+  `.cargo/`, because the release builds on stable, which refuses a backend key
+  there; it never affects release, coverage, or verification builds.
 - `AGENTS.md`: Provides repository-specific working instructions for agents and
   contributors.
 - `Cargo.toml`: Defines package metadata, dependencies, lint policy, and Cargo
