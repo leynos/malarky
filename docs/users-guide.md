@@ -88,3 +88,24 @@ The generated `Makefile` exposes these public targets:
 Install `clang`, `lld`, `python3`, and `cargo-audit` before running the full
 generated workflow locally on Linux. See the developer guide for additional
 local build tooling.
+
+## Building from source
+
+The repository's Cargo defaults and the Makefile development targets
+(`make test`, `make lint`, `make typecheck` and the debug build) use the
+parallel `rustc` frontend (`-Zthreads=8`) and, on Linux, the `mold` linker.
+`make dev-build` and `make dev-test` use the same flags as well as the
+Cranelift backend. On Linux, install `mold` before building: its flag reaches
+the linker through the default `cc` driver, which must be GCC 12.1 or newer, or
+clang, so `clang` is needed only where `cc` is an older GCC.
+
+`make release` and `make coverage` use neither flag, because an assigned
+`RUSTFLAGS` displaces the configuration's flags. `make release` assigns
+`RUSTFLAGS="${RUSTFLAGS-}"`, which passes the caller's value through unchanged
+and adds nothing, so a shipped artefact keeps the platform linker.
+`make coverage` assigns its own flags and ignores caller-provided flags. To
+build with the platform linker directly, assign an empty `RUSTFLAGS`:
+
+```bash
+RUSTFLAGS="" cargo build --release
+```

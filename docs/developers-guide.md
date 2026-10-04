@@ -126,6 +126,9 @@ own `RUSTFLAGS`) and for each coverage and release target on a Linux host, and
 the `setup-rust` steps of the CI workflows (each must pass `install-mold`), so
 a flag lost through a recipe or workflow edit fails there.
 
+The decision and its rationale are recorded in
+[ADR 004](adr-004-rust-build-standard.md).
+
 ### Cranelift
 
 Exception: Cranelift is not the default backend in `.cargo/config.toml`. The
