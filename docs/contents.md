@@ -45,6 +45,9 @@ set.
   transaction and concurrency guarantees for implementers.
 - [ADR 003](adr-003-agent-cli-and-layered-configuration.md) defines the
   invocation, selection, and override contracts for integrators.
+- [ADR 004](adr-004-rust-build-standard.md) records why development builds
+  adopt the Rust build standard and why coverage, release and Cranelift stay
+  outside it.
 
 ## Rust reference material
 
