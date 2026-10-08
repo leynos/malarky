@@ -45,9 +45,9 @@ Development, test, lint and typecheck builds use `-Zthreads=8` and, on Linux,
 `mold`, from `.cargo/config.toml` and from the Makefile and workflow steps that
 assign `RUSTFLAGS`. Coverage assigns its own flags and ignores the caller's.
 The release recipe assigns `RUSTFLAGS="${RUSTFLAGS-}"`, which keeps the
-caller's value and adds nothing. Cranelift is selected by the opt-in
-`dev-build` and `dev-test` targets through `tools/dev-fast/config.toml`, never
-by `.cargo/config.toml`.
+caller's value and adds nothing. The standard development targets and
+`dev-build` and `dev-test` select Cranelift through
+`tools/dev-fast/config.toml`, never through `.cargo/config.toml`.
 
 `tests/build_standard_contract.rs` reads the configuration sources and the
 commands `make -n` prints for each target, and a further contract holds the CI
@@ -56,7 +56,8 @@ doctest step's own `RUSTFLAGS`.
 ## Consequences
 
 - Linux builds require `mold`, and its flag reaches the linker through `cc`,
-  which must be GCC 12.1 or newer, or clang.
+  which must be GCC 12.1 or newer, or clang. For `x86_64-unknown-linux-gnu`,
+  `.cargo/config.toml` selects `clang` explicitly, so `clang` is required there.
 - A change to a recipe or workflow step that assigns `RUSTFLAGS` must restate
   the flags, and the contracts say which one fails when it does not.
 - Revisit Cranelift if the release moves to the pinned nightly.

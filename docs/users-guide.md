@@ -74,9 +74,9 @@ The generated `Makefile` exposes these public targets:
 - `make test` runs `cargo nextest run` when cargo-nextest is installed and
   falls back to `cargo test` otherwise. All projects also run doctests.
 - `make build` builds the debug target.
-- `make dev-build` builds the debug target using the opt-in accelerated
-  toolchain described in the developer guide.
-- `make dev-test` runs tests using the opt-in accelerated toolchain
+- `make dev-build` builds the debug target with the Cranelift backend and the
+  standard flags described in the developer guide.
+- `make dev-test` runs tests with the Cranelift backend and the standard flags
   described in the developer guide.
 - `make release` builds the release target.
 - `make coverage` writes `lcov.info` using `cargo llvm-cov` and `lld`.
@@ -94,10 +94,13 @@ local build tooling.
 The repository's Cargo defaults and the Makefile development targets
 (`make test`, `make lint`, `make typecheck` and the debug build) use the
 parallel `rustc` frontend (`-Zthreads=8`) and, on Linux, the `mold` linker.
-`make dev-build` and `make dev-test` use the same flags as well as the
-Cranelift backend. On Linux, install `mold` before building: its flag reaches
-the linker through the default `cc` driver, which must be GCC 12.1 or newer, or
-clang, so `clang` is needed only where `cc` is an older GCC.
+Those targets also select the Cranelift backend, as do `make dev-build` and
+`make dev-test`. The development recipes keep any `RUSTFLAGS` you set and
+append the standard flags after them. On Linux, install `mold` before building:
+its flag reaches the linker through the default `cc` driver, which must be GCC
+12.1 or newer, or clang. For `x86_64-unknown-linux-gnu`, `.cargo/config.toml`
+selects `clang` explicitly, so install `clang` there whatever version of GCC
+you have.
 
 `make release` and `make coverage` use neither flag, because an assigned
 `RUSTFLAGS` displaces the configuration's flags. `make release` assigns
