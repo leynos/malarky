@@ -13,6 +13,7 @@ categories = []
 [dependencies]
 
 [dev-dependencies]
+serde_norway = "0.9.42"
 camino = "1.2.5"
 cap-std = { version = "4.0.2", features = ["fs_utf8"] }
 proptest = "1.10.0"
