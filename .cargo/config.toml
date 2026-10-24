@@ -26,3 +26,4 @@ linker = "clang"
 # linker. Other targets, macOS and Windows included, fall through to `[build] rustflags`.
 [target.'cfg(target_os = "linux")']
 rustflags = ["-Zthreads=8", "-Clink-arg=-fuse-ld=mold"]
+
