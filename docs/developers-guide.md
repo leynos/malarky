@@ -212,6 +212,26 @@ exception rests on that release constraint, not on a suite measurement under
 Cranelift, so moving the pin from `nightly-2026-05-28` to `nightly-2026-10-30`
 needed no new measurement and no deferral date.
 
+## Development build footprint
+
+The repository follows the Concordat `rust-dev-build-footprint` rule.
+`Cargo.toml`'s default development profile sets `incremental = false` and
+`debug = 0`, and the test profile inherits both, so builds keep no incremental
+state and no debug information and write far fewer intermediate artefacts. The
+trade-off is that a debugger sees no symbols or line tables in a default
+development build and every rebuild recompiles whole crates. To debug, run with
+`CARGO_PROFILE_DEV_DEBUG=true`; to rebuild incrementally, set
+`CARGO_INCREMENTAL=1`. `.cargo/config.toml` also sets
+`[unstable] embed-metadata = false`, the native Cargo key for nightlies from
+2026-07-31, so Cargo coordinates metadata output itself. No raw rustc metadata
+flags are used, and the pin is not moved to suit the key. Whoever moves the pin
+across a boundary of the rule must switch the key to match the new pin family.
+Stable Cargo, which builds the release, ignores the `[unstable]` table.
+`tests/footprint_contract.rs` asks Cargo itself (`--unit-graph` and
+`config get`, which compile nothing) for the effective profiles and the key, so
+an override in any configuration file Cargo merges is caught as well as the
+manifest's own table.
+
 ## Lint baseline
 
 `Cargo.toml`'s `[lints.clippy]`, `[lints.rust]`, and `[lints.rustdoc]` tables
