@@ -191,7 +191,7 @@ The decision and its rationale are recorded in
 ### Cranelift
 
 Exception: Cranelift is not the default backend in `.cargo/config.toml`. The
-repository pins `nightly-2026-05-28`, but the release workflow
+repository pins `nightly-2026-10-30`, but the release workflow
 (`cross +stable build --release`) builds on a stable toolchain against
 `.cargo/config.toml`, and stable Cargo refuses a
 `[profile.dev] codegen-backend` key ("config profile `dev` is not valid"), so a
@@ -207,7 +207,10 @@ configuration and an accepted one differ in the message, and nothing compiles.
 The probe must run on stable, because a nightly Cargo accepts a backend that
 stable refuses. The test therefore needs the stable toolchain installed
 (`rustup toolchain install stable --profile minimal`); CI installs it before
-the tests run. Revisit if the release moves to the pinned nightly.
+the tests run. Revisit if the release moves to the pinned nightly. The
+exception rests on that release constraint, not on a suite measurement under
+Cranelift, so moving the pin from `nightly-2026-05-28` to `nightly-2026-10-30`
+needed no new measurement and no deferral date.
 
 ## Lint baseline
 
