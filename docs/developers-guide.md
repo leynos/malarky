@@ -11,6 +11,24 @@ available. `make audit` derives the Rust workspace root with `cargo metadata`,
 logs workspace member manifests, and runs `cargo audit` once from the workspace
 root. `make coverage` uses `cargo llvm-cov` with `lld`.
 
+## Fetching dependencies before tests
+
+The footprint contract starts its own `cargo`, and so can the coverage run.
+Cargo resolves dependencies while it holds the package-cache lock in
+`$CARGO_HOME`, so a nested `cargo` that resolves cold can wait on another
+repository's build for many minutes. The fix is to fetch once, before any test
+starts, and to run the nested calls offline:
+
+- `make test` runs `cargo fetch --locked` first. A failed fetch stops the run.
+- `ci.yml` and `coverage-main.yml` run `cargo fetch --locked` as an
+  unconditional step before the coverage step, with no `|| true`.
+- The footprint contract sets `CARGO_NET_OFFLINE=true` on its `cargo` command,
+  after its environment removals. Prepare a direct or offline run with
+  `cargo fetch --locked` first; a crate the fetch missed then fails at once
+  instead of waiting.
+
+The estate lint rule `nested-cargo-offline-tests` checks all three.
+
 ## Malarky test ownership
 
 `proptest` 1.10.0 and `trybuild` are development dependencies. Pure `document`,

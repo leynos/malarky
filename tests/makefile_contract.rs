@@ -79,13 +79,19 @@ fn mentions_dev_fast(text: &str) -> bool {
 /// variable or a bare `cargo` word.
 fn invokes_cargo(line: &str) -> bool { line.contains("$(CARGO)") || line.contains("cargo") }
 
+/// Returns `true` if `line` runs `cargo fetch`, which downloads the locked
+/// dependencies and compiles nothing, so the dev-fast profile does not apply.
+fn is_cargo_fetch(line: &str) -> bool { line.contains(" fetch ") || line.ends_with(" fetch") }
+
 /// Returns the cargo-invoking lines of `recipe` that do not pass
 /// `--config`, so a caller can report exactly which invocation was missed
 /// rather than only that the recipe as a whole lacks the flag somewhere.
+/// `cargo fetch` builds nothing, so it is not held to the flag.
 fn cargo_lines_missing_config(recipe: &str) -> Vec<&str> {
     recipe
         .lines()
         .filter(|line| invokes_cargo(line))
+        .filter(|line| !is_cargo_fetch(line))
         .filter(|line| !line.contains("--config"))
         .collect()
 }
