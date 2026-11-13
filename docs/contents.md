@@ -46,8 +46,7 @@ set.
 - [ADR 003](adrs/adr-0003-agent-cli-and-layered-configuration.md) defines the
   invocation, selection, and override contracts for integrators.
 - [ADR 004](adrs/adr-0004-rust-build-standard.md) records why development builds
-  adopt the Rust build standard and why coverage, release and Cranelift stay
-  outside it.
+  adopt the Rust build standard and why coverage and release stay outside it.
 
 ## Rust reference material
 

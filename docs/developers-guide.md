@@ -151,16 +151,13 @@ dependency.
 ## Tooling
 
 Development builds use the build standard described below: `-Zthreads=8` and,
-on Linux, clang linking with `mold`, from `.cargo/config.toml`. The standard
-make targets also select the Cranelift backend by passing
-`--config tools/dev-fast/config.toml`, as do `make dev-build` and
-`make dev-test`; that fragment holds only the backend selection and is never
-applied to release, coverage, or verification builds (see
+on Linux, clang linking with `mold`, from `.cargo/config.toml`, which also
+selects the Cranelift backend for the dev profile (see
 [Fast development builds](../AGENTS.md#fast-development-builds) in
 `AGENTS.md`). Coverage generation uses `lld` and LLVM because coverage tooling
-expects them. The pinned nightly toolchain retains the `llvm-tools-preview` and
-`rustc-codegen-cranelift-preview` components, so both paths have what they need
-installed.
+expects them, and selects LLVM explicitly. The pinned nightly toolchain retains
+the `llvm-tools-preview` and `rustc-codegen-cranelift-preview` components, so
+both paths have what they need installed.
 
 Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
 full generated workflow locally on Linux.
@@ -208,27 +205,16 @@ The decision and its rationale are recorded in
 
 ### Cranelift
 
-Exception: Cranelift is not the default backend in `.cargo/config.toml`. The
-repository pins `nightly-2026-10-30`, but the release workflow
-(`cross +stable build --release`) builds on a stable toolchain against
-`.cargo/config.toml`, and stable Cargo refuses a
-`[profile.dev] codegen-backend` key ("config profile `dev` is not valid"), so a
-backend selected there would break every release (recorded 2026-09-29). The
-standard make targets select Cranelift instead, by passing
-`--config tools/dev-fast/config.toml`, which holds only the backend selection;
-coverage and release builds never pass it. A contract fails if a
-`codegen-backend` key reaches `.cargo/config.toml` while the release builds on
-`+stable`. `tests/stable_cargo_config.rs` also asks stable Cargo itself, through
-`rustup run stable cargo build --release --bin no-such-bin`: stable Cargo
-resolves every configured profile before it looks up the target, so a refused
-configuration and an accepted one differ in the message, and nothing compiles.
-The probe must run on stable, because a nightly Cargo accepts a backend that
-stable refuses. The test therefore needs the stable toolchain installed
-(`rustup toolchain install stable --profile minimal`); CI installs it before
-the tests run. Revisit if the release moves to the pinned nightly. The
-exception rests on that release constraint, not on a suite measurement under
-Cranelift, so moving the pin from `nightly-2026-05-28` to `nightly-2026-10-30`
-needed no new measurement and no deferral date.
+Cranelift is the default backend for development builds: `.cargo/config.toml`
+enables `[unstable] codegen-backend` and sets
+`[profile.dev] codegen-backend = "cranelift"`, so every `cargo` invocation in
+the checkout uses it. The `rustc-codegen-cranelift-preview` component comes
+with the pinned nightly. Stable Cargo refuses that configuration, so every
+build in this repository, the release workflow's `cross build --release`
+included, runs on the nightly that `rust-toolchain.toml` pins. Release builds
+keep LLVM, since `[profile.dev]` does not reach the release profile, and
+`make coverage` selects LLVM explicitly. The full suite passes under Cranelift
+(measured 2026-11-13).
 
 ## Development build footprint
 

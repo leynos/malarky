@@ -4,8 +4,9 @@
 
 Accepted on 4 October 2026. Malarky's development builds use the parallel
 `rustc` frontend and, on Linux, the `mold` linker, while coverage and release
-builds stay on the defaults and Cranelift stays outside the auto-discovered
-Cargo configuration.
+builds stay on the defaults. Amended 13 November 2026: the release workflow
+moved to the pinned nightly, so Cranelift became the development default in
+`.cargo/config.toml`.
 
 ## Date
 
@@ -35,9 +36,10 @@ a stable baseline that the fast flags would disturb.
   and CI step that assigns `RUSTFLAGS` without them.
 - Restate the flags in each recipe and step, held by a contract test. This is
   the option taken.
-- Select Cranelift in `.cargo/config.toml`. Stable Cargo, which the release
-  workflow uses through `cross +stable`, refuses a `codegen-backend` key there,
-  so the backend would break every release.
+- Select Cranelift in `.cargo/config.toml`. Originally rejected, because stable
+  Cargo, which the release workflow then used through `cross +stable`, refuses a
+  `codegen-backend` key there. Taken on 13 November 2026, once the release
+  moved to the pinned nightly.
 
 ## Decision outcome
 
@@ -45,9 +47,9 @@ Development, test, lint and typecheck builds use `-Zthreads=8` and, on Linux,
 `mold`, from `.cargo/config.toml` and from the Makefile and workflow steps that
 assign `RUSTFLAGS`. Coverage assigns its own flags and ignores the caller's.
 The release recipe assigns `RUSTFLAGS="${RUSTFLAGS-}"`, which keeps the
-caller's value and adds nothing. The standard development targets and
-`dev-build` and `dev-test` select Cranelift through
-`tools/dev-fast/config.toml`, never through `.cargo/config.toml`.
+caller's value and adds nothing. Development builds select Cranelift through
+`.cargo/config.toml`; coverage selects LLVM explicitly, and the release builds
+on the pinned nightly with LLVM.
 
 `tests/build_standard_contract.rs` reads the configuration sources and the
 commands `make -n` prints for each target, and a further contract holds the CI
@@ -60,4 +62,5 @@ doctest step's own `RUSTFLAGS`.
   `.cargo/config.toml` selects `clang` explicitly, so `clang` is required there.
 - A change to a recipe or workflow step that assigns `RUSTFLAGS` must restate
   the flags, and the contracts say which one fails when it does not.
-- Revisit Cranelift if the release moves to the pinned nightly.
+- Every build, the release included, needs the pinned nightly: stable Cargo
+  refuses the `codegen-backend` key in `.cargo/config.toml`.

@@ -74,10 +74,6 @@ The generated `Makefile` exposes these public targets:
 - `make test` runs `cargo nextest run` when cargo-nextest is installed and
   falls back to `cargo test` otherwise. All projects also run doctests.
 - `make build` builds the debug target.
-- `make dev-build` builds the debug target with the Cranelift backend and the
-  standard flags described in the developer guide.
-- `make dev-test` runs tests with the Cranelift backend and the standard flags
-  described in the developer guide.
 - `make release` builds the release target.
 - `make coverage` writes `lcov.info` using `cargo llvm-cov` and `lld`.
 - `make audit` derives the Rust workspace root with `cargo metadata` and runs
@@ -94,8 +90,8 @@ local build tooling.
 The repository's Cargo defaults and the Makefile development targets
 (`make test`, `make lint`, `make typecheck` and the debug build) use the
 parallel `rustc` frontend (`-Zthreads=8`) and, on Linux, the `mold` linker.
-Those targets also select the Cranelift backend, as do `make dev-build` and
-`make dev-test`. The development recipes keep any `RUSTFLAGS` you set and
+Development builds also use the Cranelift backend, selected in
+`.cargo/config.toml`. The development recipes keep any `RUSTFLAGS` you set and
 append the standard flags after them. On Linux, install `mold` before building:
 its flag reaches the linker through the default `cc` driver, which must be GCC
 12.1 or newer, or clang. For `x86_64-unknown-linux-gnu`, `.cargo/config.toml`

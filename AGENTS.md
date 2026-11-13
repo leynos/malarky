@@ -381,25 +381,8 @@ collaboration.
 
 ## Fast development builds
 
-`make dev-build` and `make dev-test` compile with the Cranelift backend
-selected in `tools/dev-fast/config.toml`. They require the pinned nightly
-toolchain. The fragment is passed explicitly with `--config`, so release,
-coverage, and verification builds are unaffected. Never copy it into
-`.cargo/config.toml`: the release builds on stable, and stable Cargo refuses a
-`codegen-backend` key there. The build standard's `mold` linker (on Linux) and
-`-Zthreads=8` do live in `.cargo/config.toml`, so every development build gets
-them, with or without the fragment.
-
-## The dev-fast profile is the standard development path
-
-The standard `make build`, `make test`, `make lint`, and `make typecheck`
-targets already pass `--config tools/dev-fast/config.toml` to every cargo
-invocation they make; this is not an opt-in extra, it is how routine
-development builds, tests, lints, and typechecks run day to day. An agent or
-human who calls `cargo build`, `cargo test`, `cargo clippy`, or `cargo check`
-directly for a development run, rather than going through `make`, must pass
-`--config tools/dev-fast/config.toml` on that invocation too. Never apply the
-fragment to coverage, release, or verification builds. Mixing direct-cargo
-invocations and `make` invocations without the flag thrashes the incremental
-build cache, because the two invocations produce different compiler
-fingerprints for what is otherwise the same source tree.
+Development builds compile with the Cranelift backend, the parallel frontend
+and, on Linux, the `mold` linker, all set in `.cargo/config.toml`, which every
+`cargo` invocation discovers. They require the pinned nightly toolchain and a
+`mold` binary on the `PATH`. Release builds use LLVM, and `make coverage`
+selects LLVM explicitly. See `docs/developers-guide.md`, "Cranelift".
