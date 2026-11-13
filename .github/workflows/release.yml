@@ -48,7 +48,6 @@ jobs:
       - uses: leynos/shared-actions/.github/actions/setup-rust@6cec89bac47a21cf756d68d638a9a510998e57f8
         with:
           expect-cache: any
-          toolchain: stable
       - name: Cache cross binary
         id: cache-cross
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
@@ -75,14 +74,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-${{ matrix.target }}-
       - name: Build release binary
-        # Use +stable to override rust-toolchain.toml's pinned nightly, so
-        # release builds use the stable toolchain regardless of the
-        # repository's development toolchain pin.
+        # The release builds on the nightly pinned in rust-toolchain.toml,
+        # with the LLVM backend: [profile.dev]'s Cranelift setting does not
+        # reach the release profile.
         env:
           # Build release artifacts without the repository's mold linker
           # RUSTFLAGS from .cargo/config.toml.
           RUSTFLAGS: ""
-        run: cross +stable build --release --target ${{ matrix.target }}
+          # .cargo/config.toml names clang as the x86_64 Linux linker, and the
+          # cross container ships gcc only. Cross forwards this variable into
+          # the container.
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: gcc
+        run: cross build --release --target ${{ matrix.target }}
       - name: Prepare artifact
         run: |
           mkdir -p artifacts/${{ matrix.os }}-${{ matrix.arch }}

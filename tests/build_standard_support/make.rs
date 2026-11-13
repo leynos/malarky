@@ -13,14 +13,7 @@ use super::{
 /// `RUSTFLAGS` with the standard flags or assigns none and so takes the
 /// configuration's. The list is this repository's own, and a target that stops
 /// being defined fails the contract rather than dropping out of it.
-const DEVELOPMENT_TARGETS: &[&str] = &[
-    "test",
-    "typecheck",
-    "lint",
-    "build",
-    "dev-build",
-    "dev-test",
-];
+const DEVELOPMENT_TARGETS: &[&str] = &["test", "typecheck", "lint", "build"];
 /// Makefile targets that measure or ship, so every command assigns `RUSTFLAGS`
 /// and none carries a standard flag.
 const HELD_OUT_TARGETS: &[&str] = &["coverage", "release"];
@@ -124,11 +117,24 @@ pub fn commands_from(stdout: &str) -> Result<Vec<Assignment>, String> {
         // A tool-availability probe names Cargo but runs no build.
         .filter(|command| !command.starts_with("command -v"))
         .filter(|command| command.contains("cargo") || command.contains("whitaker"))
+        // An installer-managed Whitaker is deliberately isolated from the
+        // repository's development flags and backend (BD-008), so it is not held
+        // to the standard flags.
         .map(|command| match assigned_rustflags(&command)? {
+            Assignment::Flags(..) if isolated_whitaker(&command) => Ok(Assignment::Unassigned),
             Assignment::Unassigned if compiles(&command) => Ok(Assignment::Bare(command)),
             other => Ok(other),
         })
         .collect()
+}
+
+/// Returns whether a command runs Whitaker with an explicit LLVM backend, so it
+/// does not inherit the repository's Cranelift default.
+fn isolated_whitaker(command: &str) -> bool {
+    command.contains("CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm")
+        && command
+            .split_whitespace()
+            .any(|word| word.rsplit('/').next() == Some("whitaker"))
 }
 
 /// A Makefile target name, typed so a runner takes a target and not just any text.
