@@ -204,7 +204,7 @@ linker runs. `tests/linker_provisioning_contract.rs` reads the parsed
 that no step installs a linker by hand.
 
 The decision and its rationale are recorded in
-[ADR 004](adr-004-rust-build-standard.md).
+[ADR 004](adrs/adr-0004-rust-build-standard.md).
 
 ### Cranelift
 

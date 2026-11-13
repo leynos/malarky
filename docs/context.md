@@ -28,7 +28,7 @@ block. It includes visible text represented by spans and blocks but excludes
 link, reference, and image destinations, front matter, CriticMarkup delimiters,
 and comments. Matching always operates on this net-result view, so hidden
 metadata boundaries remain unavailable as candidates. This contract is governed
-by [ADR 001](adr-001-source-preserving-semantic-model.md).
+by [ADR 001](adrs/adr-0001-source-preserving-semantic-model.md).
 
 **Source span:** A half-open byte range in the original Markdown source that
 corresponds to semantic text or an existing annotation.
