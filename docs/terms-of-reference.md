@@ -10,9 +10,9 @@ integrators.
 - [Domain context](context.md)
 - [Technical design](malarky-design.md)
 - [Development roadmap](roadmap.md)
-- [ADR 001](adr-001-source-preserving-semantic-model.md)
-- [ADR 002](adr-002-atomic-mutation-and-file-replacement.md)
-- [ADR 003](adr-003-agent-cli-and-layered-configuration.md)
+- [ADR 001](adrs/adr-0001-source-preserving-semantic-model.md)
+- [ADR 002](adrs/adr-0002-atomic-mutation-and-file-replacement.md)
+- [ADR 003](adrs/adr-0003-agent-cli-and-layered-configuration.md)
 
 The three ADRs govern the accepted architecture.
 
@@ -242,7 +242,7 @@ context, normalized match, and ambiguous match.
 ## Design handoff candidates
 
 - Record the selected use of `leynos/ortho-config` for layered configuration in
-  [ADR 003](adr-003-agent-cli-and-layered-configuration.md) and the
+  [ADR 003](adrs/adr-0003-agent-cli-and-layered-configuration.md) and the
   [technical design](malarky-design.md). Its documented precedence and
   command-line/configuration-file support fit Malarky's override model.
 - Represent semantic text as source-mapped block spans. Prior art demonstrates

@@ -1,7 +1,7 @@
 //! Normative domain shapes for Malarky's source-mapped matching design.
 //!
-//! [ADR 001](../adr-001-source-preserving-semantic-model.md) governs source
-//! mapping. [ADR 002](../adr-002-atomic-mutation-and-file-replacement.md)
+//! [ADR 001](../adrs/adr-0001-source-preserving-semantic-model.md) governs source
+//! mapping. [ADR 002](../adrs/adr-0002-atomic-mutation-and-file-replacement.md)
 //! governs mutation planning.
 use std::rc::Rc;
 /// The UTF-8 source against which domain offsets are validated.

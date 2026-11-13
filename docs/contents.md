@@ -39,13 +39,13 @@ set.
 
 ## Architecture decision records
 
-- [ADR 001](adr-001-source-preserving-semantic-model.md) explains to
+- [ADR 001](adrs/adr-0001-source-preserving-semantic-model.md) explains to
   implementers why semantic matching uses composed source maps.
-- [ADR 002](adr-002-atomic-mutation-and-file-replacement.md) defines the
+- [ADR 002](adrs/adr-0002-atomic-mutation-and-file-replacement.md) defines the
   transaction and concurrency guarantees for implementers.
-- [ADR 003](adr-003-agent-cli-and-layered-configuration.md) defines the
+- [ADR 003](adrs/adr-0003-agent-cli-and-layered-configuration.md) defines the
   invocation, selection, and override contracts for integrators.
-- [ADR 004](adr-004-rust-build-standard.md) records why development builds
+- [ADR 004](adrs/adr-0004-rust-build-standard.md) records why development builds
   adopt the Rust build standard and why coverage, release and Cranelift stay
   outside it.
 

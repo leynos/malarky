@@ -16,11 +16,11 @@ correctness and command contract.
 - [Domain types](design/malarky-domain.rs)
 - [Mutation matrix](design/mutation-matrix.md)
 - [Development roadmap](roadmap.md)
-- [ADR 001](adr-001-source-preserving-semantic-model.md): preserve source
+- [ADR 001](adrs/adr-0001-source-preserving-semantic-model.md): preserve source
   through mapped semantic text
-- [ADR 002](adr-002-atomic-mutation-and-file-replacement.md): make mutation
-  and replacement failure-atomic
-- [ADR 003](adr-003-agent-cli-and-layered-configuration.md): stabilize the
+- [ADR 002](adrs/adr-0002-atomic-mutation-and-file-replacement.md): make
+  mutation and replacement failure-atomic
+- [ADR 003](adrs/adr-0003-agent-cli-and-layered-configuration.md): stabilize the
   agent CLI and layered configuration
 
 **Last substantive revision:** 20 August 2026
@@ -79,7 +79,7 @@ prove that conversion before source slicing is permitted.
 The [domain types](design/malarky-domain.rs) define half-open `SourceSpan`
 ranges, source-mapped semantic segments, match candidates, annotations, and
 mutation plans. The core accepts no bare integer offsets outside this boundary.
-[ADR 001](adr-001-source-preserving-semantic-model.md)
+[ADR 001](adrs/adr-0001-source-preserving-semantic-model.md)
 governs this representation.
 
 ### 3.1 Semantic text
@@ -313,8 +313,8 @@ edits; one invalid edit rejects the entire `--all` command.
 The [CLI contract](design/malarky-cli.txt) is normative. Mutation flags appear
 after the verb, so agents can issue `malarky delete --match 1 ...` as specified
 by the terms of reference.
-[ADR 003](adr-003-agent-cli-and-layered-configuration.md) governs this command
-and override surface.
+[ADR 003](adrs/adr-0003-agent-cli-and-layered-configuration.md) governs this
+command and override surface.
 
 `ortho_config` loads configuration in this precedence order:
 
@@ -362,7 +362,7 @@ temporary file.
 Mutation commands finish matching, planning, prospective parsing, and diff
 generation before opening a temporary file. The buffered diff must succeed
 before replacement, so diff failure cannot follow a committed edit.
-[ADR 002](adr-002-atomic-mutation-and-file-replacement.md) governs the
+[ADR 002](adrs/adr-0002-atomic-mutation-and-file-replacement.md) governs the
 transaction. The filesystem adapter then:
 
 1. opens a uniquely named temporary file in the target's directory;

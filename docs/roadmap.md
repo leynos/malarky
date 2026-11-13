@@ -5,9 +5,9 @@ This roadmap translates the accepted
 [technical design](malarky-design.md), and its normative artefacts under
 `docs/design/` into an outcome-oriented delivery sequence. The governing
 decisions are
-[ADR 001](adr-001-source-preserving-semantic-model.md), [ADR 002](adr-002-atomic-mutation-and-file-replacement.md),
-and [ADR 003](adr-003-agent-cli-and-layered-configuration.md). No Request for
-Comments (RFC) documents currently govern the project.
+[ADR 001](adrs/adr-0001-source-preserving-semantic-model.md), [ADR 002](adrs/adr-0002-atomic-mutation-and-file-replacement.md),
+and [ADR 003](adrs/adr-0003-agent-cli-and-layered-configuration.md). No
+Request for Comments (RFC) documents currently govern the project.
 
 The roadmap follows Goals, Ideas, Steps, and Tasks (GIST): each phase carries a
 falsifiable idea, each step is a workstream that tests part of that idea, and
