@@ -6,7 +6,9 @@ Accepted on 4 October 2026. Malarky's development builds use the parallel
 `rustc` frontend and, on Linux, the `mold` linker, while coverage and release
 builds stay on the defaults. Amended 13 November 2026: the release workflow
 moved to the pinned nightly, so Cranelift became the development default in
-`.cargo/config.toml`.
+`.cargo/config.toml`. Amended 14 November 2026: the Cranelift selection is
+commented out and LLVM is the estate standard again, with review due
+14 May 2027; the component and the opt-in stay.
 
 ## Date
 
@@ -47,8 +49,9 @@ Development, test, lint and typecheck builds use `-Zthreads=8` and, on Linux,
 `mold`, from `.cargo/config.toml` and from the Makefile and workflow steps that
 assign `RUSTFLAGS`. Coverage assigns its own flags and ignores the caller's.
 The release recipe assigns `RUSTFLAGS="${RUSTFLAGS-}"`, which keeps the
-caller's value and adds nothing. Development builds select Cranelift through
-`.cargo/config.toml`; coverage selects LLVM explicitly, and the release builds
+caller's value and adds nothing. Development builds use LLVM; the Cranelift
+selection in `.cargo/config.toml` is commented out (it was the default from 13
+to 14 November 2026). Coverage selects LLVM explicitly, and the release builds
 on the pinned nightly with LLVM.
 
 `tests/build_standard_contract.rs` reads the configuration sources and the

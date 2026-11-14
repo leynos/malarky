@@ -152,12 +152,12 @@ dependency.
 
 Development builds use the build standard described below: `-Zthreads=8` and,
 on Linux, clang linking with `mold`, from `.cargo/config.toml`, which also
-selects the Cranelift backend for the dev profile (see
+leaves the dev profile on the default LLVM backend (see
 [Fast development builds](../AGENTS.md#fast-development-builds) in
 `AGENTS.md`). Coverage generation uses `lld` and LLVM because coverage tooling
 expects them, and selects LLVM explicitly. The pinned nightly toolchain retains
 the `llvm-tools-preview` and `rustc-codegen-cranelift-preview` components, so
-both paths have what they need installed.
+coverage and a Cranelift opt-in both have what they need installed.
 
 Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
 full generated workflow locally on Linux.

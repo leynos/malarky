@@ -129,7 +129,7 @@ pub fn commands_from(stdout: &str) -> Result<Vec<Assignment>, String> {
 }
 
 /// Returns whether a command runs Whitaker with an explicit LLVM backend, so it
-/// does not inherit the repository's Cranelift default.
+/// does not inherit a Cranelift opt-in.
 fn isolated_whitaker(command: &str) -> bool {
     command.contains("CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm")
         && command
