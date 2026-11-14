@@ -90,13 +90,13 @@ local build tooling.
 The repository's Cargo defaults and the Makefile development targets
 (`make test`, `make lint`, `make typecheck` and the debug build) use the
 parallel `rustc` frontend (`-Zthreads=8`) and, on Linux, the `mold` linker.
-Development builds also use the Cranelift backend, selected in
-`.cargo/config.toml`. The development recipes keep any `RUSTFLAGS` you set and
-append the standard flags after them. On Linux, install `mold` before building:
-its flag reaches the linker through the default `cc` driver, which must be GCC
-12.1 or newer, or clang. For `x86_64-unknown-linux-gnu`, `.cargo/config.toml`
-selects `clang` explicitly, so install `clang` there whatever version of GCC
-you have.
+Development builds use the default LLVM backend; the Cranelift selection in
+`.cargo/config.toml` is commented out. The development recipes keep any
+`RUSTFLAGS` you set and append the standard flags after them. On Linux, install
+`mold` before building: its flag reaches the linker through the default `cc`
+driver, which must be GCC 12.1 or newer, or clang. For
+`x86_64-unknown-linux-gnu`, `.cargo/config.toml` selects `clang` explicitly, so
+install `clang` there whatever version of GCC you have.
 
 `make release` and `make coverage` use neither flag, because an assigned
 `RUSTFLAGS` displaces the configuration's flags. `make release` assigns

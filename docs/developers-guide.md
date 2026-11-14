@@ -152,12 +152,12 @@ dependency.
 
 Development builds use the build standard described below: `-Zthreads=8` and,
 on Linux, clang linking with `mold`, from `.cargo/config.toml`, which also
-selects the Cranelift backend for the dev profile (see
+leaves the dev profile on the default LLVM backend (see
 [Fast development builds](../AGENTS.md#fast-development-builds) in
 `AGENTS.md`). Coverage generation uses `lld` and LLVM because coverage tooling
 expects them, and selects LLVM explicitly. The pinned nightly toolchain retains
 the `llvm-tools-preview` and `rustc-codegen-cranelift-preview` components, so
-both paths have what they need installed.
+coverage and a Cranelift opt-in both have what they need installed.
 
 Install `clang`, `lld`, `mold`, `python3`, and `cargo-audit` before running the
 full generated workflow locally on Linux.
@@ -205,16 +205,17 @@ The decision and its rationale are recorded in
 
 ### Cranelift
 
-Cranelift is the default backend for development builds: `.cargo/config.toml`
-enables `[unstable] codegen-backend` and sets
-`[profile.dev] codegen-backend = "cranelift"`, so every `cargo` invocation in
-the checkout uses it. The `rustc-codegen-cranelift-preview` component comes
-with the pinned nightly. Stable Cargo refuses that configuration, so every
-build in this repository, the release workflow's `cross build --release`
-included, runs on the nightly that `rust-toolchain.toml` pins. Release builds
-keep LLVM, since `[profile.dev]` does not reach the release profile, and
-`make coverage` selects LLVM explicitly. The full suite passes under Cranelift
-(measured 2026-11-13).
+The estate standard is LLVM, so LLVM is the default backend here. The Cranelift
+selection in `.cargo/config.toml` is commented out; the
+`[unstable] codegen-backend` key and the `rustc-codegen-cranelift-preview`
+component stay for an opt-in. See the
+[concordat decision record](https://github.com/leynos/concordat/blob/main/docs/adrs/adr-0004-cranelift-is-not-part-of-the-rust-build-standard.md),
+with review due 14 May 2027. An inherited `CARGO_PROFILE_*_CODEGEN_BACKEND`
+variable can still select Cranelift, and Cranelift does not unwind, so no test
+may rely on a caught panic under an opt-in. Stable Cargo refuses the
+`[unstable]` table, so every build in this repository, the release workflow's
+`cross build --release` included, runs on the nightly that
+`rust-toolchain.toml` pins. `make coverage` selects LLVM explicitly.
 
 ## Development build footprint
 
