@@ -49,10 +49,42 @@ fn make_default_goal_in(
     makefile: &str,
     environment: &[(&str, &str)],
 ) -> std::io::Result<GoalProbe> {
-    use std::{
-        io::Write as _,
-        process::{Command as Process, Stdio},
-    };
+    let output = run_make_on_fixture(makefile, environment)?;
+    Ok(GoalProbe {
+        goal: default_goal_in_output(&output),
+        diagnostic: String::from_utf8_lossy(&output.stderr).into_owned(),
+    })
+}
+
+/// Runs `make -f - -pn` on `makefile` with `environment` set on the child and
+/// [`INHERITED_FLAGS`] removed, and returns its collected output.
+///
+/// # Errors
+///
+/// Returns the error raised starting `make` or feeding it the fixture.
+fn run_make_on_fixture(
+    makefile: &str,
+    environment: &[(&str, &str)],
+) -> std::io::Result<std::process::Output> {
+    use std::io::Write as _;
+
+    let mut child = spawn_make(environment)?;
+    child
+        .stdin
+        .take()
+        .ok_or_else(|| std::io::Error::other("make's stdin was not piped"))?
+        .write_all(makefile.as_bytes())?;
+    child.wait_with_output()
+}
+
+/// Starts `make -f - -pn` with piped standard streams, `environment` set on the
+/// child and [`INHERITED_FLAGS`] removed from it.
+///
+/// # Errors
+///
+/// Returns the error raised starting `make`.
+fn spawn_make(environment: &[(&str, &str)]) -> std::io::Result<std::process::Child> {
+    use std::process::{Command as Process, Stdio};
 
     let mut command = Process::new("make");
     command
@@ -61,27 +93,23 @@ fn make_default_goal_in(
     for flag in INHERITED_FLAGS {
         command.env_remove(flag);
     }
-    let mut child = command
+    command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .spawn()?;
-    child
-        .stdin
-        .take()
-        .ok_or_else(|| std::io::Error::other("make's stdin was not piped"))?
-        .write_all(makefile.as_bytes())?;
-    let output = child.wait_with_output()?;
+        .spawn()
+}
+
+/// Returns the `.DEFAULT_GOAL` that make printed in its variable database, or
+/// `None` where make refused the fixture or printed no such variable.
+fn default_goal_in_output(output: &std::process::Output) -> Option<String> {
+    if !output.status.success() {
+        return None;
+    }
     let text = String::from_utf8_lossy(&output.stdout);
-    let goal = output.status.success().then_some(()).and_then(|()| {
-        text.lines().find_map(|line| {
-            let (name, value) = line.split_once(" = ").or_else(|| line.split_once(" := "))?;
-            (name == ".DEFAULT_GOAL").then(|| value.to_owned())
-        })
-    });
-    Ok(GoalProbe {
-        goal,
-        diagnostic: String::from_utf8_lossy(&output.stderr).into_owned(),
+    text.lines().find_map(|line| {
+        let (name, value) = line.split_once(" = ").or_else(|| line.split_once(" := "))?;
+        (name == ".DEFAULT_GOAL").then(|| value.to_owned())
     })
 }
 
