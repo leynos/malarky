@@ -31,6 +31,14 @@ repository's build for many minutes. The fix is to fetch once, before any test
 starts, and to run the nested calls offline:
 
 - `make test` runs `cargo fetch --locked` first. A failed fetch stops the run.
+- `make test` then pays for the `trybuild` build before the timed pass. It
+  builds the test binaries under the run's own flags (`--no-run`) and runs
+  `domain_design_ui` once, because `--no-run` leaves `trybuild`'s own build tree
+  (`target/tests/trybuild`) empty. On a cold target the warm-up costs about 30
+  s; the timed `domain_design_ui` test then takes about 1.4 s. The warm-up
+  always runs the UI test, so a narrowed run such as
+  `make test TEST_FLAGS=--lib` still pays for it; run `cargo test --lib`
+  directly to skip it.
 - `ci.yml` and `coverage-main.yml` run `cargo fetch --locked` as an
   unconditional step before the coverage step, with no `|| true`.
 - The footprint contract sets `CARGO_NET_OFFLINE=true` on its `cargo` command,
